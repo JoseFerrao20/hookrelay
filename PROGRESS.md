@@ -16,7 +16,7 @@ they write their status to `docs/progress/<agent-name>.md`.
 | 3. Integration (feature/e0) | coordinator | feature/e0 | done | 5ab82dc | - |
 | 4. PR "E0 — Foundations" | coordinator | feature/e0 | done | 198e62b | Owner review of https://github.com/JoseFerrao20/hookrelay/pull/1 (CI green) |
 
-## E1 — Endpoints & data model
+## E1 — Endpoints & data model (PR https://github.com/JoseFerrao20/hookrelay/pull/9, merged)
 
 | Task | Owner | Branch | Status | Last commit | Next action |
 |------|-------|--------|--------|-------------|-------------|
@@ -27,6 +27,18 @@ they write their status to `docs/progress/<agent-name>.md`.
 | 2c. ADR-002, README API docs, CI smoke job | ci-docs | e1/ci-docs | done | bfbef4e | Smoke job validated by CI on the PR |
 | 3. Integration (feature/e1) | coordinator | feature/e1 | done | bd012e4 | - |
 | 4. PR "E1 — Endpoints & data model" | coordinator | feature/e1 | done | c43994c | Owner review/merge of https://github.com/JoseFerrao20/hookrelay/pull/9 (CI green: build + smoke) |
+
+## E2 — Delivery pipeline
+
+| Task | Owner | Branch | Status | Last commit | Next action |
+|------|-------|--------|--------|-------------|-------------|
+| 0. Merge E1 (PR #9) | coordinator | main | done | 7472979 | - |
+| 1. E2 contract (docs/contracts/E2.md) | coordinator | main | doing | - | Write dispatch design, schema V2, config, tests, ownership |
+| 2a. Dispatcher, worker, HTTP sender, attempts API | app-skeleton | e2/app-skeleton | todo | - | Launch after contract is on main |
+| 2b. Webhook sink + E2 smoke test | local-infra | e2/local-infra | todo | - | Launch after contract is on main |
+| 2c. ADR-003, README, CI smoke with sink | ci-docs | e2/ci-docs | todo | - | Launch after contract is on main |
+| 3. Integration (feature/e2) | coordinator | feature/e2 | todo | - | Merge 2a-2c, verify build, smoke test |
+| 4. PR "E2 — Delivery pipeline" | coordinator | feature/e2 | todo | - | Open PR to main, watch CI |
 
 ## Resume protocol
 
