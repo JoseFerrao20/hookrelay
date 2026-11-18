@@ -46,3 +46,19 @@ Branch: e2/ci-docs
 
 ### Problems
 - none
+
+## E3
+
+Branch: e3/ci-docs
+
+| Task | Status (todo/doing/done) | Last commit | Next action |
+|------|--------------------------|-------------|-------------|
+| CI smoke fast-retry env | done | see git log | - |
+| ADR 0004 + ADR 0001 pointer | done | see git log | - |
+| README updates | done | see git log | - |
+
+### Decisions
+- Wrote the retry env vars in the Start stack step only, as the contract says.
+
+### Problems
+- none

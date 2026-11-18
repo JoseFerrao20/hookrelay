@@ -22,6 +22,7 @@ infrastructure, and familiar to the maintainer.
 - **Database:** PostgreSQL 16 for endpoints, events and delivery attempts, with
   Flyway migrations.
 - **Broker:** RabbitMQ 3 for the delivery pipeline, retry queues and the DLQ.
+  (Retries are scheduled in PostgreSQL instead; see [ADR 0004](0004-retries-and-dead-letters.md).)
 - **Build:** Gradle with the Kotlin DSL, using the wrapper, plus Spotless
   (google-java-format) for formatting.
 - **Testing:** JUnit 5 and Testcontainers against real PostgreSQL and RabbitMQ.
