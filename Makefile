@@ -1,4 +1,17 @@
-.PHONY: up down logs ps app clean
+.PHONY: up down logs ps app clean run smoke build format
+
+run:
+	./gradlew bootRun
+
+# Needs the app running (make up && make run, or make app).
+smoke:
+	./scripts/smoke-test.sh
+
+build:
+	./gradlew build
+
+format:
+	./gradlew spotlessApply
 
 up:
 	docker compose up -d --wait
