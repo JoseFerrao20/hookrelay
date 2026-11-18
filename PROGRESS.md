@@ -21,10 +21,10 @@ they write their status to `docs/progress/<agent-name>.md`.
 | Task | Owner | Branch | Status | Last commit | Next action |
 |------|-------|--------|--------|-------------|-------------|
 | 0. Merge E0 (PR #1) | coordinator | main | done | 80711e2 | - |
-| 1. E1 contract (docs/contracts/E1.md) | coordinator | main | doing | - | Write API, schema, packages, ownership; generalize agent definitions |
-| 2a. Domain, persistence and REST API | app-skeleton | e1/app-skeleton | todo | - | Launch after contract is on main |
-| 2b. Smoke test script + Makefile targets | local-infra | e1/local-infra | todo | - | Launch after contract is on main |
-| 2c. ADR-002, README API docs, CI smoke job | ci-docs | e1/ci-docs | todo | - | Launch after contract is on main |
+| 1. E1 contract (docs/contracts/E1.md) | coordinator | main | done | b7f0702 | - |
+| 2a. Domain, persistence and REST API | app-skeleton | e1/app-skeleton | doing | - | Running (see docs/progress/app-skeleton.md) |
+| 2b. Smoke test script + Makefile targets | local-infra | e1/local-infra | doing | - | Running (see docs/progress/local-infra.md) |
+| 2c. ADR-002, README API docs, CI smoke job | ci-docs | e1/ci-docs | doing | - | Running (see docs/progress/ci-docs.md) |
 | 3. Integration (feature/e1) | coordinator | feature/e1 | todo | - | Merge 2a-2c, verify build, smoke test, CI |
 | 4. PR "E1 — Endpoints & data model" | coordinator | feature/e1 | todo | - | Open PR to main |
 
