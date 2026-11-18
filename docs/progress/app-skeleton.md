@@ -48,13 +48,17 @@ Branch: e2/app-skeleton
 | Task | Status (todo/doing/done) | Last commit | Next action |
 |------|--------------------------|-------------|-------------|
 | Progress section | done | see git log | - |
-| V2 migration + entities/repositories | todo | - | V2__dispatch.sql, DeliveryAttempt |
-| Properties + topology + sender | todo | - | dispatch package |
-| Poller + worker + integration tests | todo | - | - |
-| Attempts endpoint + remaining tests | todo | - | - |
+| V2 migration + entities/repositories | done | see git log | - |
+| Properties + topology + sender | done | see git log | - |
+| Poller + worker + integration tests | done | see git log | - |
+| Attempts endpoint + remaining tests | done | see git log | final ./gradlew build |
 
 ### Decisions
-- (none yet)
+- Poller leases rows in its own short transaction and publishes (with publisher confirms) AFTER it ends, instead of inside it as contract 2.1 says: a worker can get the message before the poller transaction ends, miss the bumped version and drop it (observed in tests; the row then waits for lease expiry). On publish failure the leases are released best effort, otherwise they expire.
+- Lease query is one `UPDATE ... WHERE id IN (SELECT ... FOR UPDATE SKIP LOCKED) RETURNING id, version`, equivalent to select-then-update.
+- Claim also loads event and endpoint in the same short transaction; the endpoint disabled/deleted check happens there.
+- `CAST(:param AS ...)` on nullable params of the native record update (Postgres null typing).
+- Message converter bean is a Jackson2JsonMessageConverter on the app ObjectMapper.
 
 ### Problems
-- None yet.
+- None open.

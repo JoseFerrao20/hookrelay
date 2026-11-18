@@ -52,34 +52,52 @@ public class DeliveryPoller {
     }
   }
 
-  /** Runs one poll cycle; returns the number of deliveries published. */
+  /**
+   * Runs one poll cycle; returns the number of deliveries published.
+   *
+   * <p>The lease transaction is finished before anything is published: a worker can receive a
+   * message before the poller's transaction would end, miss the bumped version and drop the
+   * message. If publishing fails, the leases are released right away (best effort); otherwise they
+   * expire and the rows are picked up again.
+   */
   public int poll() {
-    Integer published =
-        tx.execute(
-            status -> {
-              Instant now = clock.instant();
-              List<Object[]> leased =
-                  deliveries.leaseDue(now, now.plus(props.lease()), props.batchSize());
-              if (leased.isEmpty()) {
-                return 0;
-              }
-              rabbit.invoke(
-                  ops -> {
-                    for (Object[] row : leased) {
-                      ops.convertAndSend(
-                          DispatchConfig.EXCHANGE,
-                          DispatchConfig.ROUTING_KEY,
-                          new DeliveryMessage((UUID) row[0], ((Number) row[1]).longValue()));
-                    }
-                    ops.waitForConfirmsOrDie(CONFIRM_TIMEOUT_MS);
-                    return null;
-                  });
-              return leased.size();
-            });
-    int count = published == null ? 0 : published;
-    if (count > 0) {
-      log.debug("Published {} due deliveries", count);
+    Instant now = clock.instant();
+    List<Object[]> leased =
+        tx.execute(status -> deliveries.leaseDue(now, now.plus(props.lease()), props.batchSize()));
+    if (leased == null || leased.isEmpty()) {
+      return 0;
     }
-    return count;
+    try {
+      rabbit.invoke(
+          ops -> {
+            for (Object[] row : leased) {
+              ops.convertAndSend(
+                  DispatchConfig.EXCHANGE,
+                  DispatchConfig.ROUTING_KEY,
+                  new DeliveryMessage((UUID) row[0], ((Number) row[1]).longValue()));
+            }
+            ops.waitForConfirmsOrDie(CONFIRM_TIMEOUT_MS);
+            return null;
+          });
+    } catch (RuntimeException e) {
+      releaseLeases(leased);
+      throw e;
+    }
+    log.debug("Published {} due deliveries", leased.size());
+    return leased.size();
+  }
+
+  private void releaseLeases(List<Object[]> leased) {
+    try {
+      tx.executeWithoutResult(
+          status -> {
+            for (Object[] row : leased) {
+              deliveries.releaseLease((UUID) row[0], ((Number) row[1]).longValue());
+            }
+          });
+    } catch (RuntimeException e) {
+      log.warn(
+          "Could not release leases after a failed publish; they will expire: {}", e.toString());
+    }
   }
 }

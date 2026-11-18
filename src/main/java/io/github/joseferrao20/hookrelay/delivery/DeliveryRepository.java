@@ -54,6 +54,13 @@ public interface DeliveryRepository
       @Param("now") Instant now,
       @Param("lockedUntil") Instant lockedUntil);
 
+  /** Gives back a lease taken by {@link #leaseDue} when the message could not be published. */
+  @Modifying
+  @Query(
+      value = "UPDATE deliveries SET locked_until = NULL WHERE id = :id AND version = :version",
+      nativeQuery = true)
+  int releaseLease(@Param("id") UUID id, @Param("version") long version);
+
   /** Records the outcome of a claimed attempt; 0 rows when the claim was superseded. */
   @Modifying
   @Query(
