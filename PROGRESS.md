@@ -28,7 +28,7 @@ they write their status to `docs/progress/<agent-name>.md`.
 | 3. Integration (feature/e1) | coordinator | feature/e1 | done | bd012e4 | - |
 | 4. PR "E1 — Endpoints & data model" | coordinator | feature/e1 | done | c43994c | Owner review/merge of https://github.com/JoseFerrao20/hookrelay/pull/9 (CI green: build + smoke) |
 
-## E2 — Delivery pipeline
+## E2 — Delivery pipeline (PR https://github.com/JoseFerrao20/hookrelay/pull/10, merged)
 
 | Task | Owner | Branch | Status | Last commit | Next action |
 |------|-------|--------|--------|-------------|-------------|
@@ -39,6 +39,18 @@ they write their status to `docs/progress/<agent-name>.md`.
 | 2c. ADR-003, README, CI smoke with sink | ci-docs | e2/ci-docs | done | 0d30fde | Validated by CI on the PR |
 | 3. Integration (feature/e2) | coordinator | feature/e2 | done | 03ccd5a | - |
 | 4. PR "E2 — Delivery pipeline" | coordinator | feature/e2 | done | ddabf67 | Owner review/merge of https://github.com/JoseFerrao20/hookrelay/pull/10 (CI green: build + smoke) |
+
+## E3 — Retries, backoff & DLQ
+
+| Task | Owner | Branch | Status | Last commit | Next action |
+|------|-------|--------|--------|-------------|-------------|
+| 0. Merge E2 (PR #10) | coordinator | main | done | a89e6d9 | - |
+| 1. E3 contract (docs/contracts/E3.md) | coordinator | main | doing | - | Write retry policy, state machine, V3 migration, DLQ topology, tests, ownership |
+| 2a. Retry policy, rescheduling, DEAD, DLQ topology | app-skeleton | e3/app-skeleton | todo | - | Launch after contract is on main |
+| 2b. Sink flaky/status routes, fast-retry env, E3 smoke | local-infra | e3/local-infra | todo | - | Launch after contract is on main |
+| 2c. ADR-004, README, CI fast-retry env | ci-docs | e3/ci-docs | todo | - | Launch after contract is on main |
+| 3. Integration (feature/e3) | coordinator | feature/e3 | todo | - | Merge 2a-2c, verify build, smoke test |
+| 4. PR "E3 — Retries, backoff & DLQ" | coordinator | feature/e3 | todo | - | Open PR to main, watch CI |
 
 ## Resume protocol
 
