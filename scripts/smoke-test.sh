@@ -1,10 +1,13 @@
 #!/usr/bin/env bash
 # End-to-end smoke test against a running hookrelay stack (see docs/contracts/E1.md §6).
-# Usage: scripts/smoke-test.sh [BASE_URL]   (default http://localhost:8080)
+# Usage: scripts/smoke-test.sh [BASE_URL] [SINK_URL]
+#   defaults: http://localhost:8080 http://localhost:8090 (see docs/contracts/E2.md §9)
 set -euo pipefail
 
 BASE_URL="${1:-http://localhost:8080}"
 BASE_URL="${BASE_URL%/}"
+SINK_URL="${2:-http://localhost:8090}"
+SINK_URL="${SINK_URL%/}"
 API="$BASE_URL/api/v1"
 
 for tool in curl jq; do
@@ -67,7 +70,7 @@ done
 
 step "2. create endpoint"
 request POST "$API/endpoints" -H 'Content-Type: application/json' \
-  -d '{"url":"https://example.com/smoke","description":"smoke test","eventTypes":["smoke.test"]}'
+  -d '{"url":"http://webhook-sink:8080/hooks","description":"smoke test","eventTypes":["smoke.test"]}'
 expect_status 201
 ENDPOINT_ID="$(jq -r '.id // empty' "$BODY_FILE")"
 [ -n "$ENDPOINT_ID" ] || fail "response has no id"
@@ -85,6 +88,8 @@ EVENT_ID="$(jq -r '.id // empty' "$BODY_FILE")"
 jq -e --arg ep "$ENDPOINT_ID" \
   '[.deliveries[] | select(.endpointId == $ep)] | length == 1 and .[0].status == "PENDING"' \
   "$BODY_FILE" >/dev/null || fail "expected exactly one PENDING delivery for the endpoint"
+DELIVERY_ID="$(jq -r --arg ep "$ENDPOINT_ID" '[.deliveries[] | select(.endpointId == $ep)][0].id // empty' "$BODY_FILE")"
+[ -n "$DELIVERY_ID" ] || fail "delivery has no id"
 
 step "4. replay same request, expect 200 and same event id"
 request POST "$API/events" -H 'Content-Type: application/json' \
@@ -97,10 +102,35 @@ step "5. read delivery by eventId"
 request GET "$API/deliveries?eventId=$EVENT_ID"
 expect_status 200
 jq -e --arg ep "$ENDPOINT_ID" \
-  '[.content[] | select(.endpointId == $ep and .status == "PENDING")] | length == 1' \
-  "$BODY_FILE" >/dev/null || fail "delivery for the endpoint not found with status PENDING"
+  '[.content[] | select(.endpointId == $ep)] | length == 1' \
+  "$BODY_FILE" >/dev/null || fail "delivery for the endpoint not found"
 
-step "6. delete endpoint, then GET must be 404"
+step "6. wait for delivery $DELIVERY_ID to be SUCCEEDED (max 30s)"
+deadline=$((SECONDS + 30))
+while :; do
+  request GET "$API/deliveries/$DELIVERY_ID"
+  expect_status 200
+  DSTATUS="$(jq -r '.status // empty' "$BODY_FILE")"
+  [ "$DSTATUS" != "SUCCEEDED" ] || break
+  [ "$SECONDS" -lt "$deadline" ] || fail "delivery still '$DSTATUS' after 30s"
+  sleep 1
+done
+
+step "7. delivery has exactly one SUCCEEDED attempt"
+request GET "$API/deliveries/$DELIVERY_ID/attempts"
+expect_status 200
+jq -e 'length == 1 and .[0].outcome == "SUCCEEDED"' "$BODY_FILE" >/dev/null \
+  || fail "expected 1 attempt with outcome SUCCEEDED"
+
+step "8. sink received the webhook with the right header and body"
+request GET "$SINK_URL/received"
+expect_status 200
+jq -e --arg id "$DELIVERY_ID" --argjson payload '{"smoke":true}' \
+  '[.[] | select(((.headers | to_entries | map(select(.key | ascii_downcase == "hookrelay-delivery-id")) | .[0].value) == $id)
+                 and ((.body | fromjson? // null) == $payload))] | length >= 1' \
+  "$BODY_FILE" >/dev/null || fail "sink has no matching request for delivery $DELIVERY_ID"
+
+step "9. delete endpoint, then GET must be 404"
 request DELETE "$API/endpoints/$ENDPOINT_ID"
 expect_status 204
 DELETED_ID="$ENDPOINT_ID"

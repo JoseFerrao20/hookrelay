@@ -46,4 +46,26 @@ class DeliveryControllerTest {
     when(service.get(id)).thenThrow(new NotFoundException("Delivery not found"));
     mvc.perform(get("/api/v1/deliveries/" + id)).andExpect(status().isNotFound());
   }
+
+  @Test
+  void attemptsAreListed() throws Exception {
+    UUID id = UUID.randomUUID();
+    when(service.attempts(id))
+        .thenReturn(
+            List.of(
+                new DeliveryAttemptResponse(
+                    UUID.randomUUID(), 1, "FAILED", java.time.Instant.now(), 12, 500, "HTTP 500")));
+    mvc.perform(get("/api/v1/deliveries/" + id + "/attempts"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$[0].attemptNumber").value(1))
+        .andExpect(jsonPath("$[0].responseStatus").value(500))
+        .andExpect(jsonPath("$[0].error").value("HTTP 500"));
+  }
+
+  @Test
+  void attemptsOfUnknownDeliveryReturn404() throws Exception {
+    UUID id = UUID.randomUUID();
+    when(service.attempts(id)).thenThrow(new NotFoundException("Delivery not found"));
+    mvc.perform(get("/api/v1/deliveries/" + id + "/attempts")).andExpect(status().isNotFound());
+  }
 }

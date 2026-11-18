@@ -1,4 +1,4 @@
-.PHONY: up down logs ps app clean run smoke build format
+.PHONY: up down logs ps app clean run smoke build format up-all down-all
 
 run:
 	./gradlew bootRun
@@ -28,6 +28,13 @@ ps:
 app:
 	docker compose --profile app up -d --build
 
-# Stops everything, including the app profile, and drops the named volumes.
+# Full stack: postgres, rabbitmq, app and the webhook sink.
+up-all:
+	docker compose --profile app --profile sink up -d --build --wait
+
+down-all:
+	docker compose --profile app --profile sink down -v
+
+# Stops everything, including the app and sink profiles, and drops the named volumes.
 clean:
-	docker compose --profile app down -v --remove-orphans
+	docker compose --profile app --profile sink down -v --remove-orphans
