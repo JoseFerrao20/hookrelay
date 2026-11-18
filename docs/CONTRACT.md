@@ -1,11 +1,18 @@
-# hookrelay — E0 Contract
+# hookrelay — Contract
 
-This document is the single agreement every contributor (human or agent) follows
-during E0 ("Foundations"). If something is not covered here, choose the simplest
-option and record the decision in your `docs/progress/<agent-name>.md`.
+This document is the base agreement every contributor (human or agent) follows.
+Each deliverable adds its own contract in `docs/contracts/E<N>.md` (scope, API,
+schema, file ownership); read both. Where they differ, the deliverable contract
+wins. If something is not covered, choose the simplest option and record the
+decision in your `docs/progress/<agent-name>.md`.
 
-Out of scope for E0: business logic, REST endpoints (other than Actuator), and the
-data schema (no Flyway migrations, no JPA entities). That is E1.
+| Deliverable | Contract | Status |
+|-------------|----------|--------|
+| E0 — Foundations | this file (§1–§9) | merged |
+| E1 — Endpoints & data model | [`docs/contracts/E1.md`](contracts/E1.md) | in progress |
+
+E0 scope note: no business logic, REST endpoints (other than Actuator) or data
+schema. That is E1.
 
 ## 1. Versions
 
