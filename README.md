@@ -59,6 +59,45 @@ All variables are optional; the defaults work with the local compose stack.
 | `RABBITMQ_USER` / `RABBITMQ_PASSWORD` | `hookrelay` / `hookrelay` |
 | `RABBITMQ_VHOST` | `/` |
 
+## API
+
+Base path `/api/v1`, JSON, no authentication yet (E4). Interactive docs: Swagger
+UI at <http://localhost:8080/swagger-ui.html> (spec at `/v3/api-docs`). Design
+notes: [ADR 0002](docs/adr/0002-data-model-and-api.md).
+
+| Method and path | Purpose |
+|-----------------|---------|
+| `POST /api/v1/endpoints` | Create an endpoint (secret returned once) |
+| `GET /api/v1/endpoints` | List endpoints (`page`, `size`) |
+| `GET /api/v1/endpoints/{id}` | Get an endpoint |
+| `PATCH /api/v1/endpoints/{id}` | Update an endpoint |
+| `DELETE /api/v1/endpoints/{id}` | Soft-delete an endpoint |
+| `POST /api/v1/events` | Submit an event (optional `Idempotency-Key` header) |
+| `GET /api/v1/events` | List events (`eventType`, `page`, `size`) |
+| `GET /api/v1/events/{id}` | Get an event with its deliveries |
+| `GET /api/v1/deliveries` | List deliveries (`eventId`, `endpointId`, `status`) |
+| `GET /api/v1/deliveries/{id}` | Get a delivery |
+
+Happy path:
+
+```bash
+# 1. Register an endpoint subscribed to order.created
+curl -s -X POST http://localhost:8080/api/v1/endpoints \
+  -H 'Content-Type: application/json' \
+  -d '{"url":"https://example.com/webhooks","eventTypes":["order.created"]}'
+
+# 2. Submit an event (202 on first call, 200 on an idempotent replay)
+curl -s -X POST http://localhost:8080/api/v1/events \
+  -H 'Content-Type: application/json' -H 'Idempotency-Key: order-42' \
+  -d '{"eventType":"order.created","payload":{"orderId":42}}'
+
+# 3. List the resulting deliveries (status PENDING until E2)
+curl -s 'http://localhost:8080/api/v1/deliveries?eventId=<EVENT_ID>'
+```
+
+With the app and infrastructure running, `make smoke` runs the same flow end to
+end (`scripts/smoke-test.sh`, needs `curl` and `jq`). CI runs it on every PR.
+
 ## Development
 
 | Purpose | Command |
@@ -76,7 +115,7 @@ pull request and push to `main`. Commits follow
 | Milestone | Scope |
 |-----------|-------|
 | E0 | Foundations: project skeleton, local infrastructure, CI, docs |
-| E1 | Endpoints and data model |
+| E1 (current) | Endpoints and data model |
 | E2 | Delivery pipeline |
 | E3 | Retries, backoff and DLQ |
 | E4 | Signing and security |
