@@ -25,8 +25,8 @@ they write their status to `docs/progress/<agent-name>.md`.
 | 2a. Domain, persistence and REST API | app-skeleton | e1/app-skeleton | done | c1aa03d | - |
 | 2b. Smoke test script + Makefile targets | local-infra | e1/local-infra | done | 5456d7d | Run against real API in integration (tested vs mock only) |
 | 2c. ADR-002, README API docs, CI smoke job | ci-docs | e1/ci-docs | done | bfbef4e | Smoke job validated by CI on the PR |
-| 3. Integration (feature/e1) | coordinator | feature/e1 | doing | - | Merge 2a-2c, verify build, smoke test |
-| 4. PR "E1 — Endpoints & data model" | coordinator | feature/e1 | todo | - | Open PR to main |
+| 3. Integration (feature/e1) | coordinator | feature/e1 | done | bd012e4 | - |
+| 4. PR "E1 — Endpoints & data model" | coordinator | feature/e1 | doing | - | Open PR to main, watch CI (incl. new smoke job) |
 
 ## Resume protocol
 
