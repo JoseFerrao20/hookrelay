@@ -70,13 +70,16 @@ Branch: e3/app-skeleton
 | Task | Status (todo/doing/done) | Last commit | Next action |
 |------|--------------------------|-------------|-------------|
 | Progress section | done | see git log | - |
-| RetryPolicy + unit tests | todo | - | implement |
-| V3 migration + repository changes | todo | - | after policy |
-| Worker decision + Retry-After + integration tests | todo | - | after V3 |
-| DLQ topology + legacy cleanup + tests | todo | - | after worker |
+| RetryPolicy + unit tests | done | see git log | - |
+| V3 migration + repository changes | done | see git log | - |
+| Worker decision + Retry-After + integration tests | done | see git log | - |
+| DLQ topology + legacy cleanup + tests | done | see git log | - |
 
 ### Decisions
-- (none yet)
+- `RetryPolicy` takes an injectable `DoubleSupplier` random; `RetryPolicy.dead(reason)` is a static helper for blocked (deleted/disabled) endpoints, which skip the HTTP attempt.
+- Retry-After parsing lives in `WebhookSender.parseRetryAfter` (package-private, unit-tested in `RetryPolicyTest`); HTTP-date in the past gives zero.
+- Legacy queue cleanup is a `SmartInitializingSingleton` bean in `DispatchConfig` (idempotent, logs INFO only when something was deleted).
+- Legacy cleanup is tested by declaring the old queue in the test and invoking the bean again, not by pre-declaring before context start.
 
 ### Problems
-- None yet.
+- None. `./gradlew build` green.
