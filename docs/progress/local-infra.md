@@ -58,3 +58,21 @@ Branch: e2/local-infra
 
 ### Problems
 - Real dispatch not on this branch; smoke steps validated against a throwaway mock API (outside the repo). Sink verified alone and as a compose service (project `hookrelay-e2-infra`, removed with `down -v`).
+
+## E3
+
+Branch: e3/local-infra
+
+| Task | Status (todo/doing/done) | Last commit | Next action |
+|------|--------------------------|-------------|-------------|
+| sink `/status/<code>` and `/flaky/<key>?fail=<n>` | done (curl-verified) | see git log | - |
+| compose retry env vars + `.env.example` | done (`docker compose config` ok) | see git log | - |
+| Makefile `up-all` fast retries | done | see git log | - |
+| smoke-test.sh steps 9-11 (flaky, 410, cleanup + hint) | done (validated vs mock API) | see git log | coordinator runs against real app at integration |
+
+### Decisions
+- Original delete step is now step 11 and also deletes the flaky and 410 endpoints; failure cleanup removes them too.
+- Sink: unknown/invalid `/status/<x>` or non-numeric `fail` falls back to 200 / fail=0.
+
+### Problems
+- Retry code is not on this branch; smoke steps 9-10 validated against a throwaway mock API (outside the repo). Sink verified as a compose service (project `hookrelay-e3-infra`, removed with `down -v`).
