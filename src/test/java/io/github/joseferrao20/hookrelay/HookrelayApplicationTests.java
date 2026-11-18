@@ -10,7 +10,9 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.ResponseEntity;
 
 @Import(TestcontainersConfiguration.class)
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest(
+    webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+    properties = "hookrelay.dispatch.enabled=false")
 class HookrelayApplicationTests {
 
   @Autowired TestRestTemplate rest;

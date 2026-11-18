@@ -3,6 +3,7 @@ package io.github.joseferrao20.hookrelay.delivery;
 import io.github.joseferrao20.hookrelay.common.NotFoundException;
 import io.github.joseferrao20.hookrelay.common.PageResponse;
 import io.github.joseferrao20.hookrelay.common.Pagination;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -12,9 +13,11 @@ import org.springframework.transaction.annotation.Transactional;
 public class DeliveryService {
 
   private final DeliveryRepository repository;
+  private final DeliveryAttemptRepository attempts;
 
-  public DeliveryService(DeliveryRepository repository) {
+  public DeliveryService(DeliveryRepository repository, DeliveryAttemptRepository attempts) {
     this.repository = repository;
+    this.attempts = attempts;
   }
 
   @Transactional(readOnly = true)
@@ -40,5 +43,15 @@ public class DeliveryService {
         .findById(id)
         .map(DeliveryResponse::from)
         .orElseThrow(() -> new NotFoundException("Delivery " + id + " not found"));
+  }
+
+  @Transactional(readOnly = true)
+  public List<DeliveryAttemptResponse> attempts(UUID id) {
+    if (!repository.existsById(id)) {
+      throw new NotFoundException("Delivery " + id + " not found");
+    }
+    return attempts.findByDeliveryIdOrderByAttemptNumberAsc(id).stream()
+        .map(DeliveryAttemptResponse::from)
+        .toList();
   }
 }

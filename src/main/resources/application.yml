@@ -20,6 +20,11 @@ spring:
     username: ${RABBITMQ_USER:hookrelay}
     password: ${RABBITMQ_PASSWORD:hookrelay}
     virtual-host: ${RABBITMQ_VHOST:/}
+    publisher-confirm-type: correlated
+    listener:
+      simple:
+        prefetch: 10
+        default-requeue-rejected: false
 management:
   endpoints:
     web:

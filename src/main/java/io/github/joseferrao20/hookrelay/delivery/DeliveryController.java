@@ -3,6 +3,7 @@ package io.github.joseferrao20.hookrelay.delivery;
 import io.github.joseferrao20.hookrelay.common.PageResponse;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -33,5 +34,10 @@ public class DeliveryController {
   @GetMapping("/{id}")
   public DeliveryResponse get(@PathVariable UUID id) {
     return service.get(id);
+  }
+
+  @GetMapping("/{id}/attempts")
+  public List<DeliveryAttemptResponse> attempts(@PathVariable UUID id) {
+    return service.attempts(id);
   }
 }
