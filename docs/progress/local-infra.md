@@ -39,3 +39,22 @@ Branch: e1/local-infra
 
 ### Problems
 - shellcheck not available; checked with `bash -n` and a throwaway Python mock server (pass, replay mismatch, bad delete status) kept outside the repo.
+
+## E2
+
+Branch: e2/local-infra
+
+| Task | Status (todo/doing/done) | Last commit | Next action |
+|------|--------------------------|-------------|-------------|
+| scripts/webhook-sink.py | done | see git log | - |
+| compose `webhook-sink` (profile `sink`), SINK_PORT | done | see git log | - |
+| smoke-test.sh new steps 6-8 | done (validated vs mock API) | see git log | coordinator runs against real app at integration |
+| Makefile up-all/down-all | done | see git log | - |
+
+### Decisions
+- Sink records header names as received; the smoke test matches `Hookrelay-Delivery-Id` case-insensitively and compares the body as parsed JSON.
+- `make clean` now also includes the `sink` profile.
+- Sink healthcheck uses busybox `wget` on `/received`.
+
+### Problems
+- Real dispatch not on this branch; smoke steps validated against a throwaway mock API (outside the repo). Sink verified alone and as a compose service (project `hookrelay-e2-infra`, removed with `down -v`).
