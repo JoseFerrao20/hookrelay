@@ -40,3 +40,21 @@ Branch: e1/app-skeleton
 
 ### Problems
 - None. `./gradlew build` green (21 tests incl. Testcontainers, concurrency race test, Spotless).
+
+## E2
+
+Branch: e2/app-skeleton
+
+| Task | Status (todo/doing/done) | Last commit | Next action |
+|------|--------------------------|-------------|-------------|
+| Progress section | done | see git log | - |
+| V2 migration + entities/repositories | todo | - | V2__dispatch.sql, DeliveryAttempt |
+| Properties + topology + sender | todo | - | dispatch package |
+| Poller + worker + integration tests | todo | - | - |
+| Attempts endpoint + remaining tests | todo | - | - |
+
+### Decisions
+- (none yet)
+
+### Problems
+- None yet.
