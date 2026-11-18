@@ -22,3 +22,20 @@ Branch: e0/local-infra
 - Docker Hub returned 429 on first pulls; resolved by retrying later.
 - Dockerfile not built: app source and Gradle wrapper are not on this branch and no system Gradle is available to make a throwaway wrapper project; coordinator verifies at integration.
 - `docker compose config` valid; `up -d --wait` brought postgres and rabbitmq to healthy (tested with project `hookrelay-infra-test`, removed with `down -v`).
+
+## E1
+
+Branch: e1/local-infra
+
+| Task | Status (todo/doing/done) | Last commit | Next action |
+|------|--------------------------|-------------|-------------|
+| scripts/smoke-test.sh | done (validated vs mock server) | see git log | coordinator runs it against the real app at integration |
+| Makefile run/smoke/build/format | done | see git log | - |
+
+### Decisions
+- Delivery checks filter by the created endpoint's id, so other endpoints subscribed to `smoke.test` do not break the "exactly one delivery" assertion.
+- Missing curl/jq exits 2; any failed step exits 1 and prints "SMOKE TEST FAILED at step: <n>". The script best-effort deletes its endpoint on failure.
+- Compose/Dockerfile unchanged (contract does not require changes).
+
+### Problems
+- shellcheck not available; checked with `bash -n` and a throwaway Python mock server (pass, replay mismatch, bad delete status) kept outside the repo.
