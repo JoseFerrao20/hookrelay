@@ -38,7 +38,7 @@ they write their status to `docs/progress/<agent-name>.md`.
 | 2b. Webhook sink + E2 smoke test | local-infra | e2/local-infra | done | 8d543db | Run smoke against real app in integration (mock only so far) |
 | 2c. ADR-003, README, CI smoke with sink | ci-docs | e2/ci-docs | done | 0d30fde | Validated by CI on the PR |
 | 3. Integration (feature/e2) | coordinator | feature/e2 | done | 03ccd5a | - |
-| 4. PR "E2 — Delivery pipeline" | coordinator | feature/e2 | doing | - | Open PR to main, watch CI |
+| 4. PR "E2 — Delivery pipeline" | coordinator | feature/e2 | doing | - | PR https://github.com/JoseFerrao20/hookrelay/pull/10 opened; waiting for CI (build + smoke) |
 
 ## Resume protocol
 
