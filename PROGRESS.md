@@ -26,7 +26,7 @@ they write their status to `docs/progress/<agent-name>.md`.
 | 2b. Smoke test script + Makefile targets | local-infra | e1/local-infra | done | 5456d7d | Run against real API in integration (tested vs mock only) |
 | 2c. ADR-002, README API docs, CI smoke job | ci-docs | e1/ci-docs | done | bfbef4e | Smoke job validated by CI on the PR |
 | 3. Integration (feature/e1) | coordinator | feature/e1 | done | bd012e4 | - |
-| 4. PR "E1 — Endpoints & data model" | coordinator | feature/e1 | doing | - | PR https://github.com/JoseFerrao20/hookrelay/pull/9 opened; waiting for CI (build + smoke) |
+| 4. PR "E1 — Endpoints & data model" | coordinator | feature/e1 | done | c43994c | Owner review/merge of https://github.com/JoseFerrao20/hookrelay/pull/9 (CI green: build + smoke) |
 
 ## Resume protocol
 
