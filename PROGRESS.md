@@ -45,10 +45,10 @@ they write their status to `docs/progress/<agent-name>.md`.
 | Task | Owner | Branch | Status | Last commit | Next action |
 |------|-------|--------|--------|-------------|-------------|
 | 0. Merge E2 (PR #10) | coordinator | main | done | a89e6d9 | - |
-| 1. E3 contract (docs/contracts/E3.md) | coordinator | main | doing | - | Write retry policy, state machine, V3 migration, DLQ topology, tests, ownership |
-| 2a. Retry policy, rescheduling, DEAD, DLQ topology | app-skeleton | e3/app-skeleton | todo | - | Launch after contract is on main |
-| 2b. Sink flaky/status routes, fast-retry env, E3 smoke | local-infra | e3/local-infra | todo | - | Launch after contract is on main |
-| 2c. ADR-004, README, CI fast-retry env | ci-docs | e3/ci-docs | todo | - | Launch after contract is on main |
+| 1. E3 contract (docs/contracts/E3.md) | coordinator | main | done | cf8da25 | - |
+| 2a. Retry policy, rescheduling, DEAD, DLQ topology | app-skeleton | e3/app-skeleton | doing | - | Running (see docs/progress/app-skeleton.md) |
+| 2b. Sink flaky/status routes, fast-retry env, E3 smoke | local-infra | e3/local-infra | doing | - | Running (see docs/progress/local-infra.md) |
+| 2c. ADR-004, README, CI fast-retry env | ci-docs | e3/ci-docs | doing | - | Running (see docs/progress/ci-docs.md) |
 | 3. Integration (feature/e3) | coordinator | feature/e3 | todo | - | Merge 2a-2c, verify build, smoke test |
 | 4. PR "E3 — Retries, backoff & DLQ" | coordinator | feature/e3 | todo | - | Open PR to main, watch CI |
 
