@@ -28,8 +28,9 @@ ps:
 app:
 	docker compose --profile app up -d --build
 
-# Full stack: postgres, rabbitmq, app and the webhook sink.
+# Full stack: postgres, rabbitmq, app and the webhook sink, with fast retries for development.
 up-all:
+	HOOKRELAY_RETRY_INITIAL_DELAY=1s HOOKRELAY_RETRY_MAX_DELAY=5s HOOKRELAY_RETRY_JITTER=0 \
 	docker compose --profile app --profile sink up -d --build --wait
 
 down-all:

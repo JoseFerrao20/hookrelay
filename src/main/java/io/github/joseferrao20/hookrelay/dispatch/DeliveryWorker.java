@@ -32,6 +32,7 @@ public class DeliveryWorker {
   private final EndpointRepository endpoints;
   private final WebhookSender sender;
   private final DispatchProperties props;
+  private final RetryPolicy retryPolicy;
   private final Clock clock;
   private final TransactionTemplate tx;
 
@@ -42,6 +43,7 @@ public class DeliveryWorker {
       EndpointRepository endpoints,
       WebhookSender sender,
       DispatchProperties props,
+      RetryPolicy retryPolicy,
       Clock clock,
       TransactionTemplate tx) {
     this.deliveries = deliveries;
@@ -50,6 +52,7 @@ public class DeliveryWorker {
     this.endpoints = endpoints;
     this.sender = sender;
     this.props = props;
+    this.retryPolicy = retryPolicy;
     this.clock = clock;
     this.tx = tx;
   }
@@ -124,14 +127,18 @@ public class DeliveryWorker {
   }
 
   private void record(UUID deliveryId, Claim claim, Instant startedAt, SendResult result) {
-    DeliveryStatus status = result.succeeded() ? DeliveryStatus.SUCCEEDED : DeliveryStatus.FAILED;
+    DeliveryStatus outcome = result.succeeded() ? DeliveryStatus.SUCCEEDED : DeliveryStatus.FAILED;
+    RetryDecision decision =
+        claim.blockedReason() != null
+            ? RetryPolicy.dead(claim.blockedReason())
+            : retryPolicy.decide(claim.attemptNumber(), result, clock.instant());
     tx.executeWithoutResult(
         s -> {
           attempts.save(
               new DeliveryAttempt(
                   deliveryId,
                   claim.attemptNumber(),
-                  status,
+                  outcome,
                   startedAt,
                   result.durationMs(),
                   result.responseStatus(),
@@ -140,10 +147,11 @@ public class DeliveryWorker {
               deliveries.recordResult(
                   deliveryId,
                   claim.version(),
-                  status.name(),
+                  decision.status().name(),
                   startedAt,
                   result.responseStatus(),
-                  result.error(),
+                  decision.lastError(),
+                  decision.nextAttemptAt(),
                   clock.instant());
           if (updated == 0) {
             log.warn(

@@ -3,14 +3,19 @@
 
 Records every request made to any path other than /received (method, path,
 headers, body) in memory and answers 200. GET /received returns the recorded
-requests as a JSON array. Listens on 0.0.0.0:${PORT:-8080}. Stdlib only.
+requests as a JSON array. Two deterministic routes (also recorded):
+  /status/<code>          answers with that HTTP status code
+  /flaky/<key>?fail=<n>   answers 500 for the first n requests per key, then 200
+Listens on 0.0.0.0:${PORT:-8080}. Stdlib only.
 """
 import json
 import os
 import threading
+from urllib.parse import parse_qs, urlsplit
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 RECEIVED = []
+FLAKY_COUNTS = {}
 LOCK = threading.Lock()
 
 
@@ -42,7 +47,26 @@ class Handler(BaseHTTPRequestHandler):
         }
         with LOCK:
             RECEIVED.append(record)
-        self._send(200, b"ok")
+        self._send(self._status_for(path_only), b"ok")
+
+    def _status_for(self, path_only):
+        parts = path_only.strip("/").split("/")
+        if len(parts) == 2 and parts[0] == "status":
+            try:
+                code = int(parts[1])
+            except ValueError:
+                return 200
+            return code if 200 <= code <= 599 else 200
+        if len(parts) == 2 and parts[0] == "flaky":
+            try:
+                fail = int(parse_qs(urlsplit(self.path).query).get("fail", ["0"])[0])
+            except ValueError:
+                fail = 0
+            with LOCK:
+                seen = FLAKY_COUNTS.get(parts[1], 0)
+                FLAKY_COUNTS[parts[1]] = seen + 1
+            return 500 if seen < fail else 200
+        return 200
 
     do_GET = do_POST = do_PUT = do_PATCH = do_DELETE = do_HEAD = do_OPTIONS = _handle
 

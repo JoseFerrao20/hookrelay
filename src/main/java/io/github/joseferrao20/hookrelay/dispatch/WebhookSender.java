@@ -4,6 +4,11 @@ import com.fasterxml.jackson.databind.JsonNode;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.UUID;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
@@ -29,7 +34,7 @@ public class WebhookSender {
       UUID deliveryId, UUID eventId, String eventType, int attempt, String url, JsonNode payload) {
     long start = System.nanoTime();
     try {
-      int status =
+      HttpOutcome outcome =
           client
               .post()
               .uri(url)
@@ -48,17 +53,53 @@ public class WebhookSender {
                     } catch (IOException ignored) {
                       // the body is discarded anyway; the status line is what matters
                     }
-                    return response.getStatusCode().value();
+                    int code = response.getStatusCode().value();
+                    Duration retryAfter =
+                        code == 429 || code == 503
+                            ? parseRetryAfter(
+                                response.getHeaders().getFirst("Retry-After"), clock.instant())
+                            : null;
+                    return new HttpOutcome(code, retryAfter);
                   });
       long ms = elapsedMs(start);
+      int status = outcome.status();
       boolean ok = status >= 200 && status < 300;
-      return new SendResult(status, ok ? null : "HTTP " + status, ms);
+      return new SendResult(status, ok ? null : "HTTP " + status, ms, outcome.retryAfter());
     } catch (Exception e) {
       String message = describe(e);
       if (message.length() > MAX_ERROR_LENGTH) {
         message = message.substring(0, MAX_ERROR_LENGTH);
       }
       return new SendResult(null, message, elapsedMs(start));
+    }
+  }
+
+  private record HttpOutcome(int status, Duration retryAfter) {}
+
+  /**
+   * Parses a {@code Retry-After} value (delta-seconds or HTTP-date). Returns null when missing or
+   * invalid; a date in the past yields zero.
+   */
+  static Duration parseRetryAfter(String value, Instant now) {
+    if (value == null) {
+      return null;
+    }
+    String v = value.trim();
+    if (v.isEmpty()) {
+      return null;
+    }
+    if (v.chars().allMatch(c -> c >= '0' && c <= '9')) {
+      try {
+        return Duration.ofSeconds(Long.parseLong(v));
+      } catch (NumberFormatException e) {
+        return null;
+      }
+    }
+    try {
+      Instant at = ZonedDateTime.parse(v, DateTimeFormatter.RFC_1123_DATE_TIME).toInstant();
+      return at.isAfter(now) ? Duration.between(now, at) : Duration.ZERO;
+    } catch (DateTimeParseException e) {
+      return null;
     }
   }
 
