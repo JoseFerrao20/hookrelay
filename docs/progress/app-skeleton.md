@@ -16,3 +16,27 @@ Branch: e0/app-skeleton
 
 ## Problems
 - None. `./gradlew build`, `spotlessCheck` and `bootJar` verified locally.
+
+## E1
+
+Branch: e1/app-skeleton
+
+| Task | Status (todo/doing/done) | Last commit | Next action |
+|------|--------------------------|-------------|-------------|
+| Migration + entities + repositories | done | see git log | - |
+| Common errors, pagination, config | done | see git log | - |
+| Endpoint feature | done | see git log | - |
+| Event + delivery features | done | see git log | - |
+| Tests (slices + integration) and cleanup | done | see git log | - |
+
+### Decisions
+- `EventTypes` (regex constants) lives in `common` — shared by endpoint and event DTOs.
+- `EventService.create` uses a `TransactionTemplate` instead of `@Transactional`: on an idempotency-key race the loser's transaction is aborted by the unique constraint and must re-read the winner in a fresh transaction.
+- Payload-is-object check is an `@AssertTrue` on `CreateEventRequest` (error field `payloadObject`).
+- `GlobalExceptionHandler` extends `ResponseEntityExceptionHandler`; both `MethodArgumentNotValidException` and `HandlerMethodValidationException` (raised when a method has constrained params like the `Idempotency-Key` header) yield the `errors` array.
+- Delivery filters use `JpaSpecificationExecutor` (avoids Postgres null-parameter typing issues).
+- `PATCH` cannot clear `description` (null = unchanged, per contract).
+- Idempotent replay compares payloads with Jackson `JsonNode.equals` (key order irrelevant, `1` vs `1.0` differ).
+
+### Problems
+- None. `./gradlew build` green (21 tests incl. Testcontainers, concurrency race test, Spotless).
