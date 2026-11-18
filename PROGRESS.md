@@ -12,7 +12,7 @@ they write their status to `docs/progress/<agent-name>.md`.
 | 2b. Local infra (compose, Dockerfile) | local-infra | e0/local-infra | done | 2abe5df | Build Dockerfile in integration |
 | 2c. CI + docs (workflow, README, ADR-001) | ci-docs | e0/ci-docs | done | 992584b | Merge in integration (actionlint not run) |
 | 3. Integration (feature/e0) | coordinator | feature/e0 | done | 5ab82dc | - |
-| 4. PR "E0 — Foundations" | coordinator | feature/e0 | doing | - | Open PR to main (no merge), check CI |
+| 4. PR "E0 — Foundations" | coordinator | feature/e0 | doing | - | PR https://github.com/JoseFerrao20/hookrelay/pull/1 opened; waiting for CI to go green |
 
 ## Resume protocol
 
