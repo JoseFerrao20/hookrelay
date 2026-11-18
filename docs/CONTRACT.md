@@ -182,9 +182,11 @@ daemon.
 - Commit **and push** every logical unit of work (≤ ~15 minutes of work). Never
   leave work uncommitted while waiting on something.
 - After each completed step, update and commit your `docs/progress/<agent>.md`.
-- Commit message trailer (all commits):
+- Commit message trailer (all commits): a `Co-Authored-By:` line naming the model
+  that actually authored the commit (agents follow their session's attribution
+  instructions), e.g.
   ```
-  Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+  Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
   ```
 - All code, comments, commits and docs are in English.
 
