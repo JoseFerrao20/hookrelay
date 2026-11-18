@@ -30,3 +30,19 @@ Branch: e1/ci-docs
 
 ### Problems
 - none
+
+## E2
+
+Branch: e2/ci-docs
+
+| Task | Status (todo/doing/done) | Last commit | Next action |
+|------|--------------------------|-------------|-------------|
+| CI smoke job (app + sink profiles) | done | see git log | - |
+| ADR 0003 | done | see git log | - |
+| README delivery docs, roadmap | done | see git log | - |
+
+### Decisions
+- Added the attempts endpoint to the README API table.
+
+### Problems
+- none
