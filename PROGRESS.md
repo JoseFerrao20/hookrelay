@@ -33,10 +33,10 @@ they write their status to `docs/progress/<agent-name>.md`.
 | Task | Owner | Branch | Status | Last commit | Next action |
 |------|-------|--------|--------|-------------|-------------|
 | 0. Merge E1 (PR #9) | coordinator | main | done | 7472979 | - |
-| 1. E2 contract (docs/contracts/E2.md) | coordinator | main | doing | - | Write dispatch design, schema V2, config, tests, ownership |
-| 2a. Dispatcher, worker, HTTP sender, attempts API | app-skeleton | e2/app-skeleton | todo | - | Launch after contract is on main |
-| 2b. Webhook sink + E2 smoke test | local-infra | e2/local-infra | todo | - | Launch after contract is on main |
-| 2c. ADR-003, README, CI smoke with sink | ci-docs | e2/ci-docs | todo | - | Launch after contract is on main |
+| 1. E2 contract (docs/contracts/E2.md) | coordinator | main | done | 30ed16c | - |
+| 2a. Dispatcher, worker, HTTP sender, attempts API | app-skeleton | e2/app-skeleton | doing | - | Running (see docs/progress/app-skeleton.md) |
+| 2b. Webhook sink + E2 smoke test | local-infra | e2/local-infra | doing | - | Running (see docs/progress/local-infra.md) |
+| 2c. ADR-003, README, CI smoke with sink | ci-docs | e2/ci-docs | doing | - | Running (see docs/progress/ci-docs.md) |
 | 3. Integration (feature/e2) | coordinator | feature/e2 | todo | - | Merge 2a-2c, verify build, smoke test |
 | 4. PR "E2 — Delivery pipeline" | coordinator | feature/e2 | todo | - | Open PR to main, watch CI |
 
