@@ -14,3 +14,19 @@ Branch: e0/ci-docs
 
 ## Problems
 - none
+
+## E1
+
+Branch: e1/ci-docs
+
+| Task | Status (todo/doing/done) | Last commit | Next action |
+|------|--------------------------|-------------|-------------|
+| CI smoke job | done | see git log | - |
+| ADR 0002 | done | see git log | - |
+| README API section, roadmap | done | see git log | - |
+
+### Decisions
+- Smoke job uses `--profile app` for logs and teardown too, so the app container is included.
+
+### Problems
+- none
