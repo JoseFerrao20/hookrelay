@@ -4,11 +4,21 @@ Branch: e0/local-infra
 
 | Task | Status (todo/doing/done) | Last commit | Next action |
 |------|--------------------------|-------------|-------------|
-| compose + .env.example | doing | - | write files |
-| Dockerfile + .dockerignore | todo | - | - |
-| Makefile | todo | - | - |
-| verification | todo | - | - |
+| compose + .env.example | done | see git log | - |
+| Dockerfile + .dockerignore | done (not built, see Problems) | see git log | coordinator builds at integration |
+| Makefile | done | see git log | - |
+| verification | done | see git log | - |
 
 ## Decisions
+- Compose project `name: hookrelay` set at top level so default project name is stable.
+- `make up` uses `docker compose up -d --wait` so it returns once services are healthy.
+- Dockerfile uses Spring Boot layered extraction (`-Djarmode=tools extract --layers`); runs `java -jar hookrelay.jar` from the extracted dir. Tests are skipped in the image build (`-x test`) since CI runs them.
+- Dockerfile dependency-cache layer runs `./gradlew dependencies` (failure tolerated) before copying `src`.
+- Container runtime user UID/GID 10001; JVM flags via `JAVA_TOOL_OPTIONS` (MaxRAMPercentage=75, ExitOnOutOfMemoryError).
+- App healthcheck uses `wget` (busybox, present in alpine) against `/actuator/health` on `$SERVER_PORT`.
+- Inside compose, app gets `DB_HOST=postgres`, `RABBITMQ_HOST=rabbitmq` and the in-network ports 5432/5672.
 
 ## Problems
+- Docker Hub returned 429 on first pulls; resolved by retrying later.
+- Dockerfile not built: app source and Gradle wrapper are not on this branch and no system Gradle is available to make a throwaway wrapper project; coordinator verifies at integration.
+- `docker compose config` valid; `up -d --wait` brought postgres and rabbitmq to healthy (tested with project `hookrelay-infra-test`, removed with `down -v`).
