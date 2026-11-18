@@ -25,7 +25,7 @@ public interface DeliveryRepository
                  updated_at = :now
            WHERE id IN (
                  SELECT id FROM deliveries
-                  WHERE status = 'PENDING' AND next_attempt_at <= :now
+                  WHERE status IN ('PENDING', 'FAILED') AND next_attempt_at <= :now
                     AND (locked_until IS NULL OR locked_until < :now)
                   ORDER BY next_attempt_at
                   LIMIT :limit
@@ -44,7 +44,7 @@ public interface DeliveryRepository
           """
           UPDATE deliveries SET locked_until = :lockedUntil, attempt_count = attempt_count + 1,
                  version = version + 1, updated_at = :now
-           WHERE id = :id AND version = :version AND status = 'PENDING'
+           WHERE id = :id AND version = :version AND status IN ('PENDING', 'FAILED')
           RETURNING attempt_count, version
           """,
       nativeQuery = true)
@@ -68,7 +68,8 @@ public interface DeliveryRepository
           """
           UPDATE deliveries SET status = :status, last_attempt_at = :startedAt,
                  last_response_status = CAST(:code AS integer), last_error = CAST(:error AS varchar), locked_until = NULL,
-                 next_attempt_at = NULL, version = version + 1, updated_at = :now
+                 next_attempt_at = CAST(:nextAttemptAt AS timestamptz), version = version + 1,
+                 updated_at = :now
            WHERE id = :id AND version = :claimedVersion
           """,
       nativeQuery = true)
@@ -79,5 +80,6 @@ public interface DeliveryRepository
       @Param("startedAt") Instant startedAt,
       @Param("code") Integer code,
       @Param("error") String error,
+      @Param("nextAttemptAt") Instant nextAttemptAt,
       @Param("now") Instant now);
 }

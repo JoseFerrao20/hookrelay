@@ -133,7 +133,7 @@ class DispatchIntegrationTest {
   }
 
   @Test
-  void serverErrorEndsFailed() throws Exception {
+  void serverErrorIsFailedWithScheduledRetry() throws Exception {
     wm.stubFor(post(urlEqualTo("/err")).willReturn(aResponse().withStatus(500).withBody("boom")));
     Delivery d = newDelivery(true, "/err");
 
@@ -142,7 +142,7 @@ class DispatchIntegrationTest {
     Map<String, Object> r = row(d);
     assertThat(r.get("last_response_status")).isEqualTo(500);
     assertThat(r.get("last_error")).isEqualTo("HTTP 500");
-    assertThat(r.get("next_attempt_at")).isNull();
+    assertThat(r.get("next_attempt_at")).isNotNull();
     var attempt = attempts.findByDeliveryIdOrderByAttemptNumberAsc(d.getId()).get(0);
     assertThat(attempt.getOutcome()).isEqualTo("FAILED");
     assertThat(attempt.getResponseStatus()).isEqualTo(500);
@@ -180,13 +180,14 @@ class DispatchIntegrationTest {
   }
 
   @Test
-  void disabledEndpointFailsWithoutSending() throws Exception {
+  void disabledEndpointIsDeadWithoutSending() throws Exception {
     wm.stubFor(post(urlEqualTo("/off")).willReturn(aResponse().withStatus(200)));
     Delivery d = newDelivery(false, "/off");
 
-    awaitStatus(d, "FAILED");
+    awaitStatus(d, "DEAD");
 
     assertThat(row(d).get("last_error")).isEqualTo("Endpoint disabled");
+    assertThat(row(d).get("next_attempt_at")).isNull();
     var attempt = attempts.findByDeliveryIdOrderByAttemptNumberAsc(d.getId()).get(0);
     assertThat(attempt.getResponseStatus()).isNull();
     assertThat(attempt.getDurationMs()).isZero();
