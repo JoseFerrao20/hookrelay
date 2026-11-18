@@ -34,10 +34,10 @@ they write their status to `docs/progress/<agent-name>.md`.
 |------|-------|--------|--------|-------------|-------------|
 | 0. Merge E1 (PR #9) | coordinator | main | done | 7472979 | - |
 | 1. E2 contract (docs/contracts/E2.md) | coordinator | main | done | 30ed16c | - |
-| 2a. Dispatcher, worker, HTTP sender, attempts API | app-skeleton | e2/app-skeleton | doing | - | Running (see docs/progress/app-skeleton.md) |
+| 2a. Dispatcher, worker, HTTP sender, attempts API | app-skeleton | e2/app-skeleton | done | 7b378da | - (deviation: publish after lease commit) |
 | 2b. Webhook sink + E2 smoke test | local-infra | e2/local-infra | done | 8d543db | Run smoke against real app in integration (mock only so far) |
 | 2c. ADR-003, README, CI smoke with sink | ci-docs | e2/ci-docs | done | 0d30fde | Validated by CI on the PR |
-| 3. Integration (feature/e2) | coordinator | feature/e2 | todo | - | Merge 2a-2c, verify build, smoke test |
+| 3. Integration (feature/e2) | coordinator | feature/e2 | doing | - | Merge 2a-2c, verify build, smoke test, amend E2.md §2.1 |
 | 4. PR "E2 — Delivery pipeline" | coordinator | feature/e2 | todo | - | Open PR to main, watch CI |
 
 ## Resume protocol
