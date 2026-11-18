@@ -131,4 +131,13 @@ class RetryPolicyTest {
     assertThat(d.status()).isEqualTo(DeliveryStatus.DEAD);
     assertThat(d.lastError()).isEqualTo("HTTP 500 (gave up after 1 attempts)");
   }
+
+  @Test
+  void deadReasonFitsTheLastErrorColumn() {
+    RetryPolicy p = new RetryPolicy(props(3, 0), () -> 0.5);
+    String longError = "IOException: " + "x".repeat(1987);
+    RetryDecision d = p.decide(3, new SendResult(null, longError, 5), NOW);
+    assertThat(d.status()).isEqualTo(DeliveryStatus.DEAD);
+    assertThat(d.lastError()).hasSizeLessThanOrEqualTo(2000).endsWith("(gave up after 3 attempts)");
+  }
 }

@@ -59,10 +59,23 @@ public class RetryPolicy {
       return dead("HTTP 410 (gone)");
     }
     if (attempt >= props.maxAttempts()) {
-      return dead(result.error() + " (gave up after " + attempt + " attempts)");
+      return dead(withSuffix(result.error(), " (gave up after " + attempt + " attempts)"));
     }
     Duration wait = delay(attempt, result.responseStatus(), result.retryAfter());
     return new RetryDecision(DeliveryStatus.FAILED, now.plus(wait), result.error());
+  }
+
+  /** Max length of {@code deliveries.last_error}. */
+  static final int MAX_ERROR_LENGTH = 2000;
+
+  /** Appends {@code suffix}, trimming {@code error} so the result fits {@code last_error}. */
+  static String withSuffix(String error, String suffix) {
+    String base = error == null ? "" : error;
+    int room = MAX_ERROR_LENGTH - suffix.length();
+    if (base.length() > room) {
+      base = base.substring(0, Math.max(0, room));
+    }
+    return base + suffix;
   }
 
   /** Terminal decision for failures that need no HTTP attempt (e.g. endpoint deleted). */
