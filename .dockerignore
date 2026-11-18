@@ -1,0 +1,16 @@
+.git
+.github
+.claude
+.gradle
+.idea
+.vscode
+build
+out
+docs
+*.md
+.env
+.env.*
+!.env.example
+Dockerfile
+.dockerignore
+docker-compose.yml
