@@ -62,3 +62,21 @@ Branch: e2/app-skeleton
 
 ### Problems
 - None open.
+
+## E3
+
+Branch: e3/app-skeleton
+
+| Task | Status (todo/doing/done) | Last commit | Next action |
+|------|--------------------------|-------------|-------------|
+| Progress section | done | see git log | - |
+| RetryPolicy + unit tests | todo | - | implement |
+| V3 migration + repository changes | todo | - | after policy |
+| Worker decision + Retry-After + integration tests | todo | - | after V3 |
+| DLQ topology + legacy cleanup + tests | todo | - | after worker |
+
+### Decisions
+- (none yet)
+
+### Problems
+- None yet.
