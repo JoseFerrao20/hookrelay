@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # ---- Build stage ----
-FROM eclipse-temurin:21-jdk AS build
+FROM eclipse-temurin:24-jdk AS build
 WORKDIR /workspace
 
 # Copy wrapper and build scripts first so the Gradle distribution and
@@ -15,7 +15,7 @@ RUN ./gradlew bootJar --no-daemon -x test \
     && java -Djarmode=tools -jar build/libs/hookrelay.jar extract --layers --destination build/extracted
 
 # ---- Runtime stage ----
-FROM eclipse-temurin:21-jre-alpine
+FROM eclipse-temurin:25-jre-alpine
 RUN addgroup -g 10001 -S hookrelay && adduser -u 10001 -S -G hookrelay hookrelay
 WORKDIR /app
 
