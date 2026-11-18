@@ -36,3 +36,20 @@ jobs:
           name: test-reports
           path: build/reports/tests/
           if-no-files-found: ignore
+
+  smoke:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Start stack
+        run: docker compose --profile app up -d --build --wait
+      - name: Smoke test
+        run: scripts/smoke-test.sh
+      - name: Show logs on failure
+        if: failure()
+        run: docker compose --profile app logs
+      - name: Stop stack
+        if: always()
+        run: docker compose --profile app down -v
