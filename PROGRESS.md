@@ -36,7 +36,7 @@ they write their status to `docs/progress/<agent-name>.md`.
 | 1. E2 contract (docs/contracts/E2.md) | coordinator | main | done | 30ed16c | - |
 | 2a. Dispatcher, worker, HTTP sender, attempts API | app-skeleton | e2/app-skeleton | doing | - | Running (see docs/progress/app-skeleton.md) |
 | 2b. Webhook sink + E2 smoke test | local-infra | e2/local-infra | doing | - | Running (see docs/progress/local-infra.md) |
-| 2c. ADR-003, README, CI smoke with sink | ci-docs | e2/ci-docs | doing | - | Running (see docs/progress/ci-docs.md) |
+| 2c. ADR-003, README, CI smoke with sink | ci-docs | e2/ci-docs | done | 0d30fde | Validated by CI on the PR |
 | 3. Integration (feature/e2) | coordinator | feature/e2 | todo | - | Merge 2a-2c, verify build, smoke test |
 | 4. PR "E2 — Delivery pipeline" | coordinator | feature/e2 | todo | - | Open PR to main, watch CI |
 
