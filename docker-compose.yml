@@ -68,6 +68,23 @@ services:
       retries: 10
       start_period: 40s
 
+  webhook-sink:
+    profiles: ["sink"]
+    image: python:3.12-alpine
+    command: ["python", "/app/webhook-sink.py"]
+    environment:
+      PORT: 8080
+    ports:
+      - "${SINK_PORT:-8090}:8080"
+    volumes:
+      - ./scripts/webhook-sink.py:/app/webhook-sink.py:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8080/received || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 2s
+
 volumes:
   postgres-data:
   rabbitmq-data:
