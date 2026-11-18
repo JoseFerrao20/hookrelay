@@ -1,7 +1,9 @@
-# E0 — Foundations: progress
+# hookrelay: progress
 
 Single source of truth for the coordinator. Sub-agents do **not** edit this file;
 they write their status to `docs/progress/<agent-name>.md`.
+
+## E0 — Foundations (PR https://github.com/JoseFerrao20/hookrelay/pull/1, merged)
 
 | Task | Owner | Branch | Status | Last commit | Next action |
 |------|-------|--------|--------|-------------|-------------|
@@ -13,6 +15,18 @@ they write their status to `docs/progress/<agent-name>.md`.
 | 2c. CI + docs (workflow, README, ADR-001) | ci-docs | e0/ci-docs | done | 992584b | - |
 | 3. Integration (feature/e0) | coordinator | feature/e0 | done | 5ab82dc | - |
 | 4. PR "E0 — Foundations" | coordinator | feature/e0 | done | 198e62b | Owner review of https://github.com/JoseFerrao20/hookrelay/pull/1 (CI green) |
+
+## E1 — Endpoints & data model
+
+| Task | Owner | Branch | Status | Last commit | Next action |
+|------|-------|--------|--------|-------------|-------------|
+| 0. Merge E0 (PR #1) | coordinator | main | done | 80711e2 | - |
+| 1. E1 contract (docs/contracts/E1.md) | coordinator | main | doing | - | Write API, schema, packages, ownership; generalize agent definitions |
+| 2a. Domain, persistence and REST API | app-skeleton | e1/app-skeleton | todo | - | Launch after contract is on main |
+| 2b. Smoke test script + Makefile targets | local-infra | e1/local-infra | todo | - | Launch after contract is on main |
+| 2c. ADR-002, README API docs, CI smoke job | ci-docs | e1/ci-docs | todo | - | Launch after contract is on main |
+| 3. Integration (feature/e1) | coordinator | feature/e1 | todo | - | Merge 2a-2c, verify build, smoke test, CI |
+| 4. PR "E1 — Endpoints & data model" | coordinator | feature/e1 | todo | - | Open PR to main |
 
 ## Resume protocol
 
