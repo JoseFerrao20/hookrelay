@@ -77,6 +77,7 @@ notes: [ADR 0002](docs/adr/0002-data-model-and-api.md).
 | `GET /api/v1/events/{id}` | Get an event with its deliveries |
 | `GET /api/v1/deliveries` | List deliveries (`eventId`, `endpointId`, `status`) |
 | `GET /api/v1/deliveries/{id}` | Get a delivery |
+| `GET /api/v1/deliveries/{id}/attempts` | List the delivery's attempts |
 
 Happy path:
 
@@ -91,12 +92,81 @@ curl -s -X POST http://localhost:8080/api/v1/events \
   -H 'Content-Type: application/json' -H 'Idempotency-Key: order-42' \
   -d '{"eventType":"order.created","payload":{"orderId":42}}'
 
-# 3. List the resulting deliveries (status PENDING until E2)
+# 3. List the resulting deliveries (PENDING, then SUCCEEDED or FAILED once dispatched)
 curl -s 'http://localhost:8080/api/v1/deliveries?eventId=<EVENT_ID>'
 ```
 
 With the app and infrastructure running, `make smoke` runs the same flow end to
 end (`scripts/smoke-test.sh`, needs `curl` and `jq`). CI runs it on every PR.
+
+Full stack with a local webhook sink (app container plus a receiver on port 8090):
+
+```bash
+make up-all     # docker compose --profile app --profile sink up -d --build --wait
+make smoke      # creates an endpoint, sends an event, checks the sink received it
+make down-all   # stops everything and removes volumes
+```
+
+## How delivery works
+
+PostgreSQL is the source of truth and RabbitMQ distributes the work. Retries,
+backoff and the DLQ arrive in E3: in E2 a failed attempt is final (`FAILED`).
+Design notes: [ADR 0003](docs/adr/0003-delivery-dispatch.md).
+
+```
+POST /events ──tx──▶ deliveries (PENDING)
+                          │  every poll-interval
+                          ▼
+                  DeliveryPoller ── claims due rows (FOR UPDATE SKIP LOCKED),
+                          │         sets locked_until, bumps version
+                          ▼
+            RabbitMQ  exchange hookrelay.deliveries ─▶ queue hookrelay.deliveries.dispatch
+                          │   message {deliveryId, version}
+                          ▼
+                  DeliveryWorker ── claim(id, version) ─▶ HTTP POST ─▶ record result + attempt
+```
+
+Delivery is at-least-once. Any 2xx response is success. Any other status
+(redirects are not followed), an I/O error or a timeout is a failure. Every
+attempt is recorded and visible at `GET /api/v1/deliveries/{id}/attempts`.
+
+### What receivers get
+
+Each delivery is an HTTP `POST` with the event payload as the JSON body and these
+headers:
+
+| Header | Value |
+|--------|-------|
+| `Content-Type` | `application/json` |
+| `User-Agent` | `hookrelay/<app version>` |
+| `Hookrelay-Delivery-Id` | Delivery UUID |
+| `Hookrelay-Event-Id` | Event UUID |
+| `Hookrelay-Event-Type` | Event type |
+| `Hookrelay-Attempt` | Attempt number, starting at 1 |
+| `Hookrelay-Timestamp` | Send time, Unix epoch seconds |
+
+Dedupe advice: a delivery can occasionally be sent more than once (for example,
+when an attempt outlives its lease). Store `Hookrelay-Delivery-Id` and ignore
+repeats, and make handlers idempotent. Respond with a 2xx quickly, and do the
+heavy work asynchronously.
+
+### Dispatch configuration
+
+Properties live under `hookrelay.dispatch`; each can be set by environment variable.
+
+| Property | Env var | Default |
+|----------|---------|---------|
+| `enabled` | `HOOKRELAY_DISPATCH_ENABLED` | `true` |
+| `poll-interval` | `HOOKRELAY_DISPATCH_POLL_INTERVAL` | `1s` |
+| `batch-size` | `HOOKRELAY_DISPATCH_BATCH_SIZE` | `100` |
+| `lease` | `HOOKRELAY_DISPATCH_LEASE` | `60s` (must exceed connect + request timeout) |
+| `connect-timeout` | `HOOKRELAY_DISPATCH_CONNECT_TIMEOUT` | `5s` |
+| `request-timeout` | `HOOKRELAY_DISPATCH_REQUEST_TIMEOUT` | `10s` |
+| `consumers` | `HOOKRELAY_DISPATCH_CONSUMERS` | `4` |
+
+With `enabled=false` neither the poller nor the listener runs; the API works as before.
+Until E4, endpoint URLs are not restricted, so do not expose a development instance
+to untrusted users (SSRF risk).
 
 ## Development
 
@@ -115,8 +185,8 @@ pull request and push to `main`. Commits follow
 | Milestone | Scope |
 |-----------|-------|
 | E0 | Foundations: project skeleton, local infrastructure, CI, docs |
-| E1 (current) | Endpoints and data model |
-| E2 | Delivery pipeline |
+| E1 | Endpoints and data model |
+| E2 (current) | Delivery pipeline |
 | E3 | Retries, backoff and DLQ |
 | E4 | Signing and security |
 | E5 | Observability |
