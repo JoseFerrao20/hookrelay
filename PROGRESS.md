@@ -11,7 +11,7 @@ they write their status to `docs/progress/<agent-name>.md`.
 | 2a. Spring Boot skeleton | app-skeleton | e0/app-skeleton | done | 09754eb | Merge in integration |
 | 2b. Local infra (compose, Dockerfile) | local-infra | e0/local-infra | done | 2abe5df | Build Dockerfile in integration |
 | 2c. CI + docs (workflow, README, ADR-001) | ci-docs | e0/ci-docs | done | 992584b | Merge in integration (actionlint not run) |
-| 3. Integration (feature/e0) | coordinator | feature/e0 | doing | - | Merge 2a-2c, verify build/compose/health |
+| 3. Integration (feature/e0) | coordinator | feature/e0 | doing | e953b59 | Merged 3 branches, no conflicts; build, compose health and app health UP verified. Next: verify docker build |
 | 4. PR "E0 — Foundations" | coordinator | feature/e0 | todo | - | Open PR to main (no merge) |
 
 ## Resume protocol
