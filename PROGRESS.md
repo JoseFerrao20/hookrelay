@@ -50,7 +50,7 @@ they write their status to `docs/progress/<agent-name>.md`.
 | 2b. Sink flaky/status routes, fast-retry env, E3 smoke | local-infra | e3/local-infra | done | ddae424 | Run smoke against real app in integration (mock only so far) |
 | 2c. ADR-004, README, CI fast-retry env | ci-docs | e3/ci-docs | done | b29de43 | Validated by CI on the PR |
 | 3. Integration (feature/e3) | coordinator | feature/e3 | done | 85c0113 | - |
-| 4. PR "E3 — Retries, backoff & DLQ" | coordinator | feature/e3 | doing | - | Open PR to main, watch CI |
+| 4. PR "E3 — Retries, backoff & DLQ" | coordinator | feature/e3 | doing | - | PR https://github.com/JoseFerrao20/hookrelay/pull/11 opened; waiting for CI (build + smoke) |
 
 ## Resume protocol
 
