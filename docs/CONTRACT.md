@@ -9,7 +9,8 @@ decision in your `docs/progress/<agent-name>.md`.
 | Deliverable | Contract | Status |
 |-------------|----------|--------|
 | E0 — Foundations | this file (§1–§9) | merged |
-| E1 — Endpoints & data model | [`docs/contracts/E1.md`](contracts/E1.md) | in progress |
+| E1 — Endpoints & data model | [`docs/contracts/E1.md`](contracts/E1.md) | merged |
+| E2 — Delivery pipeline | [`docs/contracts/E2.md`](contracts/E2.md) | in progress |
 
 E0 scope note: no business logic, REST endpoints (other than Actuator) or data
 schema. That is E1.
