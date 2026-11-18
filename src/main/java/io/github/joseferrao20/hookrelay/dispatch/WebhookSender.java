@@ -54,13 +54,36 @@ public class WebhookSender {
       boolean ok = status >= 200 && status < 300;
       return new SendResult(status, ok ? null : "HTTP " + status, ms);
     } catch (Exception e) {
-      Throwable cause = e.getCause() != null ? e.getCause() : e;
-      String message = cause.getClass().getSimpleName() + ": " + cause.getMessage();
+      String message = describe(e);
       if (message.length() > MAX_ERROR_LENGTH) {
         message = message.substring(0, MAX_ERROR_LENGTH);
       }
       return new SendResult(null, message, elapsedMs(start));
     }
+  }
+
+  /**
+   * Builds "{@code <ExceptionSimpleName>: <message>}" from the first cause below Spring's wrapper,
+   * taking the message from the first cause in the chain that has one. When no cause has a message
+   * (e.g. an unresolvable host), the nested exception names are used instead of "null".
+   */
+  static String describe(Exception e) {
+    Throwable top = e.getCause() != null ? e.getCause() : e;
+    StringBuilder chain = new StringBuilder();
+    for (Throwable t = top; t != null; t = t.getCause()) {
+      if (t.getMessage() != null && !t.getMessage().isBlank()) {
+        return top.getClass().getSimpleName() + ": " + t.getMessage();
+      }
+      if (t != top) {
+        chain.append(chain.isEmpty() ? "" : " > ").append(t.getClass().getSimpleName());
+      }
+      if (t.getCause() == t) {
+        break;
+      }
+    }
+    return chain.isEmpty()
+        ? top.getClass().getSimpleName()
+        : top.getClass().getSimpleName() + ": " + chain;
   }
 
   private static long elapsedMs(long startNanos) {

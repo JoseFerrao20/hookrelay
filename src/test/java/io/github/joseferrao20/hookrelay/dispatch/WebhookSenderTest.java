@@ -88,4 +88,19 @@ class WebhookSenderTest {
     assertThat(r.responseStatus()).isNull();
     assertThat(r.error()).isNotBlank();
   }
+
+  @Test
+  void unknownHostErrorIsDescriptive() throws Exception {
+    SendResult r =
+        sender()
+            .send(
+                UUID.randomUUID(),
+                UUID.randomUUID(),
+                "a.b",
+                1,
+                "http://does-not-exist.invalid/x",
+                mapper.readTree("{}"));
+    assertThat(r.responseStatus()).isNull();
+    assertThat(r.error()).doesNotContain("null").contains("UnresolvedAddressException");
+  }
 }
