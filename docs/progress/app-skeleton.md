@@ -16,3 +16,21 @@ Branch: e0/app-skeleton
 
 ## Problems
 - None. `./gradlew build`, `spotlessCheck` and `bootJar` verified locally.
+
+## E1
+
+Branch: e1/app-skeleton
+
+| Task | Status (todo/doing/done) | Last commit | Next action |
+|------|--------------------------|-------------|-------------|
+| Migration + entities + repositories | doing | - | write V1 and entities |
+| Common errors, pagination, config | todo | - | - |
+| Endpoint feature | todo | - | - |
+| Event + delivery features | todo | - | - |
+| Tests and cleanup | todo | - | - |
+
+### Decisions
+- (none yet)
+
+### Problems
+- None.
