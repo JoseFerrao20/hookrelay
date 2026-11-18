@@ -48,7 +48,7 @@ they write their status to `docs/progress/<agent-name>.md`.
 | 1. E3 contract (docs/contracts/E3.md) | coordinator | main | done | cf8da25 | - |
 | 2a. Retry policy, rescheduling, DEAD, DLQ topology | app-skeleton | e3/app-skeleton | doing | - | Running (see docs/progress/app-skeleton.md) |
 | 2b. Sink flaky/status routes, fast-retry env, E3 smoke | local-infra | e3/local-infra | doing | - | Running (see docs/progress/local-infra.md) |
-| 2c. ADR-004, README, CI fast-retry env | ci-docs | e3/ci-docs | doing | - | Running (see docs/progress/ci-docs.md) |
+| 2c. ADR-004, README, CI fast-retry env | ci-docs | e3/ci-docs | done | b29de43 | Validated by CI on the PR |
 | 3. Integration (feature/e3) | coordinator | feature/e3 | todo | - | Merge 2a-2c, verify build, smoke test |
 | 4. PR "E3 — Retries, backoff & DLQ" | coordinator | feature/e3 | todo | - | Open PR to main, watch CI |
 
