@@ -20,10 +20,13 @@ protection (E4) come later.
 - **PostgreSQL is the source of truth; RabbitMQ distributes work.** A delivery row
   is the authoritative state. Queue messages are only hints to do work.
 - **Poller with `FOR UPDATE SKIP LOCKED` and leases.** `DeliveryPoller` selects due
-  `PENDING` rows, sets `locked_until = now + lease`, bumps `version` and publishes
-  `{deliveryId, version}` to RabbitMQ in one transaction. It waits for publisher
-  confirms and rolls back if a publish fails. `SKIP LOCKED` makes several instances
-  safe.
+  `PENDING` rows, sets `locked_until = now + lease` and bumps `version` in one
+  short transaction. **After that transaction commits**, it publishes
+  `{deliveryId, version}` to RabbitMQ and waits for publisher confirms.
+  Publishing inside the transaction lost work. A fast worker could receive the
+  message before the commit, see the old version and drop it, and the row stayed
+  locked until its lease expired. If a publish fails, the leases are released
+  (best effort) or simply expire. `SKIP LOCKED` makes several instances safe.
 - **Version-based claims.** `DeliveryWorker` claims with
   `UPDATE ... WHERE id = :id AND version = :version AND status = 'PENDING'`. Only one
   claim succeeds per published version, so stale or duplicate messages are acked
