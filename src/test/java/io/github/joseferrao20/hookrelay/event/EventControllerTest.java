@@ -86,7 +86,8 @@ class EventControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"eventType\":\"a.b\",\"payload\":[1]}"))
         .andExpect(status().isBadRequest())
-        .andExpect(jsonPath("$.errors").isArray());
+        .andExpect(jsonPath("$.errors[0].field").value("payload"))
+        .andExpect(jsonPath("$.errors[0].message").value("must be a JSON object"));
     mvc.perform(post("/api/v1/events").contentType(MediaType.APPLICATION_JSON).content("{}"))
         .andExpect(status().isBadRequest());
     mvc.perform(
