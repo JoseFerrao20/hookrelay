@@ -31,7 +31,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 @Import(TestcontainersConfiguration.class)
-@SpringBootTest
+@SpringBootTest(properties = "hookrelay.dispatch.enabled=false")
 @AutoConfigureMockMvc
 class ApiIntegrationTest {
 

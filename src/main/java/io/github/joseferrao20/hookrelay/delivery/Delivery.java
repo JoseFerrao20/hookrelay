@@ -41,6 +41,9 @@ public class Delivery {
   @Column(name = "last_error", length = 2000)
   private String lastError;
 
+  @Column(name = "locked_until")
+  private Instant lockedUntil;
+
   @Column(name = "created_at", nullable = false)
   private Instant createdAt;
 
@@ -98,6 +101,10 @@ public class Delivery {
 
   public String getLastError() {
     return lastError;
+  }
+
+  public Instant getLockedUntil() {
+    return lockedUntil;
   }
 
   public Instant getCreatedAt() {
