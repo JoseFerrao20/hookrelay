@@ -11,7 +11,8 @@ decision in your `docs/progress/<agent-name>.md`.
 | E0 — Foundations | this file (§1–§9) | merged |
 | E1 — Endpoints & data model | [`docs/contracts/E1.md`](contracts/E1.md) | merged |
 | E2 — Delivery pipeline | [`docs/contracts/E2.md`](contracts/E2.md) | merged |
-| E3 — Retries, backoff & DLQ | [`docs/contracts/E3.md`](contracts/E3.md) | in progress |
+| E3 — Retries, backoff & DLQ | [`docs/contracts/E3.md`](contracts/E3.md) | merged |
+| E4 — Signing & security | [`docs/contracts/E4.md`](contracts/E4.md) | in progress |
 
 E0 scope note: no business logic, REST endpoints (other than Actuator) or data
 schema. That is E1.
