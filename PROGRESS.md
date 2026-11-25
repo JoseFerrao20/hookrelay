@@ -40,7 +40,7 @@ they write their status to `docs/progress/<agent-name>.md`.
 | 3. Integration (feature/e2) | coordinator | feature/e2 | done | 03ccd5a | - |
 | 4. PR "E2 — Delivery pipeline" | coordinator | feature/e2 | done | ddabf67 | Owner review/merge of https://github.com/JoseFerrao20/hookrelay/pull/10 (CI green: build + smoke) |
 
-## E3 — Retries, backoff & DLQ
+## E3 — Retries, backoff & DLQ (PR https://github.com/JoseFerrao20/hookrelay/pull/11, merged)
 
 | Task | Owner | Branch | Status | Last commit | Next action |
 |------|-------|--------|--------|-------------|-------------|
@@ -51,6 +51,20 @@ they write their status to `docs/progress/<agent-name>.md`.
 | 2c. ADR-004, README, CI fast-retry env | ci-docs | e3/ci-docs | done | b29de43 | Validated by CI on the PR |
 | 3. Integration (feature/e3) | coordinator | feature/e3 | done | 85c0113 | - |
 | 4. PR "E3 — Retries, backoff & DLQ" | coordinator | feature/e3 | done | 15a4a29 | Owner review/merge of https://github.com/JoseFerrao20/hookrelay/pull/11 (CI green: build + smoke) |
+
+## E4 — Signing & security
+
+| Task | Owner | Branch | Status | Last commit | Next action |
+|------|-------|--------|--------|-------------|-------------|
+| 0. Merge E3 (PR #11) | coordinator | main | done | 12936fb | - |
+| 1. E4 contract (docs/contracts/E4.md) | coordinator | main | doing | - | Write signing, rotation, encryption at rest, SSRF, API auth, tests, ownership |
+| 2a. Signing, rotation, encryption, SSRF, API keys | app-skeleton | e4/app-skeleton | todo | - | Launch after contract is on main |
+| 2b. Security env in compose, E4 smoke (auth, signature, rotation, SSRF) | local-infra | e4/local-infra | todo | - | Launch after contract is on main |
+| 2c. ADR-005, README security + verification guide, Dependabot majors | ci-docs | e4/ci-docs | todo | - | Launch after contract is on main |
+| 3. Integration (feature/e4) | coordinator | feature/e4 | todo | - | Merge 2a-2c, verify build, smoke test |
+| 4. PR "E4 — Signing & security" | coordinator | feature/e4 | todo | - | Open PR to main, watch CI |
+
+Open Dependabot PRs (owner decision, not touched): #15 Spring Boot 4, #12 springdoc 3, #13 Gradle 9, #3 Temurin 25 conflict with the contract (Boot 3.x / Java 21); #14 spotless and #2/#4/#5/#7 GitHub Actions look safe.
 
 ## Resume protocol
 
