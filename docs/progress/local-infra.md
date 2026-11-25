@@ -76,3 +76,22 @@ Branch: e3/local-infra
 
 ### Problems
 - Retry code is not on this branch; smoke steps 9-10 validated against a throwaway mock API (outside the repo). Sink verified as a compose service (project `hookrelay-e3-infra`, removed with `down -v`).
+
+## E4
+
+Branch: e4/local-infra
+
+| Task | Status (todo/doing/done) | Last commit | Next action |
+|------|--------------------------|-------------|-------------|
+| compose `app` security env (dev-only defaults) + `.env.example` | done (`docker compose config` ok) | see git log | - |
+| sink records `body_b64` (exact raw bytes) | done | see git log | - |
+| smoke-test.sh: Bearer key, 401, signature, rotation, SSRF, openssl required | done (validated vs mock API) | see git log | coordinator runs against real app at integration |
+
+### Decisions
+- Dev encryption key generated once with `openssl rand -base64 32` and hardcoded as the compose default and in `.env.example`.
+- Sink keeps `body` (lossy UTF-8) and adds `body_b64`; the smoke test signs over the decoded `body_b64` bytes.
+- Smoke steps renumbered 1-15 (401 = 2, signature = 10, rotation = 11, SSRF = 14).
+- The rotation step posts a second `smoke.test` event, so it uses the main endpoint with default grace.
+
+### Problems
+- App E4 code not on this branch; the full flow passed against a throwaway mock API (outside the repo) that signs in Python, so openssl was checked against an independent HMAC implementation.

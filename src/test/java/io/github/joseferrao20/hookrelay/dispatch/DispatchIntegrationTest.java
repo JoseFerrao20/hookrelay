@@ -16,6 +16,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
 import io.github.joseferrao20.hookrelay.TestcontainersConfiguration;
+import io.github.joseferrao20.hookrelay.common.SecretCipher;
 import io.github.joseferrao20.hookrelay.delivery.Delivery;
 import io.github.joseferrao20.hookrelay.delivery.DeliveryAttemptRepository;
 import io.github.joseferrao20.hookrelay.delivery.DeliveryRepository;
@@ -27,6 +28,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -38,7 +40,10 @@ import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 
-@Import(TestcontainersConfiguration.class)
+@Import({
+  TestcontainersConfiguration.class,
+  io.github.joseferrao20.hookrelay.TestAuthConfiguration.class
+})
 @SpringBootTest(
     properties = {
       "hookrelay.dispatch.enabled=true",
@@ -66,6 +71,12 @@ class DispatchIntegrationTest {
   @Autowired DeliveryAttemptRepository attempts;
   @Autowired EventRepository events;
   @Autowired EndpointRepository endpoints;
+  @Autowired SecretCipher cipher;
+
+  private Endpoint endpointWithSecret(String url, String secret, boolean enabled, Instant now) {
+    UUID id = UUID.randomUUID();
+    return new Endpoint(id, url, null, cipher.encrypt(id, secret), enabled, Set.of("*"), now);
+  }
 
   @BeforeEach
   void clean() {
@@ -79,8 +90,7 @@ class DispatchIntegrationTest {
   private Delivery newDelivery(boolean endpointEnabled, String path) throws Exception {
     Instant now = Instant.now();
     Endpoint endpoint =
-        endpoints.save(
-            new Endpoint(wm.baseUrl() + path, null, "secret", endpointEnabled, Set.of("*"), now));
+        endpoints.save(endpointWithSecret(wm.baseUrl() + path, "secret", endpointEnabled, now));
     Event event =
         events.save(
             new Event("order.created", json.readTree("{\"orderId\":42,\"ok\":true}"), null, now));

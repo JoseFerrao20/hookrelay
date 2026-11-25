@@ -61,8 +61,8 @@ they write their status to `docs/progress/<agent-name>.md`.
 | 2a. Signing, rotation, encryption, SSRF, API keys | app-skeleton | e4/app-skeleton | done | bdf0568 | - |
 | 2b. Security env in compose, E4 smoke (auth, signature, rotation, SSRF) | local-infra | e4/local-infra | done | 0e8f414 | Run smoke against real app in integration (mock only so far) |
 | 2c. ADR-005, README security + verification guide, Dependabot majors | ci-docs | e4/ci-docs | done | f6b6bfc | Verify README signature guide in integration |
-| 3. Integration (feature/e4) | coordinator | feature/e4 | doing | - | Merge 2a-2c, security review, build, smoke test |
-| 4. PR "E4 — Signing & security" | coordinator | feature/e4 | todo | - | Open PR to main, watch CI |
+| 3. Integration (feature/e4) | coordinator | feature/e4 | done | 4518231 | - |
+| 4. PR "E4 — Signing & security" | coordinator | feature/e4 | done | ea490b7 | Owner review/merge of https://github.com/JoseFerrao20/hookrelay/pull/16 (CI green: build + smoke) |
 
 Open Dependabot PRs (owner decision, not touched): #15 Spring Boot 4, #12 springdoc 3, #13 Gradle 9, #3 Temurin 25 conflict with the contract (Boot 3.x / Java 21); #14 spotless and #2/#4/#5/#7 GitHub Actions look safe.
 

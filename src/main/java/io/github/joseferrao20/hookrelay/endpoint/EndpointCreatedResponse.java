@@ -14,7 +14,7 @@ public record EndpointCreatedResponse(
     Instant updatedAt,
     String secret) {
 
-  static EndpointCreatedResponse from(Endpoint e) {
+  static EndpointCreatedResponse from(Endpoint e, String plaintextSecret) {
     return new EndpointCreatedResponse(
         e.getId(),
         e.getUrl(),
@@ -23,6 +23,6 @@ public record EndpointCreatedResponse(
         e.isEnabled(),
         e.getCreatedAt(),
         e.getUpdatedAt(),
-        e.getSecret());
+        plaintextSecret);
   }
 }

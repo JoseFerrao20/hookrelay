@@ -9,18 +9,22 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.github.joseferrao20.hookrelay.TestAuthConfiguration;
 import io.github.joseferrao20.hookrelay.common.ConflictException;
+import io.github.joseferrao20.hookrelay.security.SecurityConfig;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(EventController.class)
+@Import({SecurityConfig.class, TestAuthConfiguration.class})
 class EventControllerTest {
 
   @Autowired MockMvc mvc;
