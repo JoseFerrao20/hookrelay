@@ -2,12 +2,13 @@
 """Minimal webhook sink for local development and the smoke test.
 
 Records every request made to any path other than /received (method, path,
-headers, body) in memory and answers 200. GET /received returns the recorded
+headers, body, and body_b64 = the exact raw bytes, base64) in memory and answers 200. GET /received returns the recorded
 requests as a JSON array. Two deterministic routes (also recorded):
   /status/<code>          answers with that HTTP status code
   /flaky/<key>?fail=<n>   answers 500 for the first n requests per key, then 200
 Listens on 0.0.0.0:${PORT:-8080}. Stdlib only.
 """
+import base64
 import json
 import os
 import threading
@@ -44,6 +45,7 @@ class Handler(BaseHTTPRequestHandler):
             "path": self.path,
             "headers": {k: v for k, v in self.headers.items()},
             "body": raw.decode("utf-8", errors="replace"),
+            "body_b64": base64.b64encode(raw).decode("ascii"),
         }
         with LOCK:
             RECEIVED.append(record)
