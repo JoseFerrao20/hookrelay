@@ -12,7 +12,7 @@ Stack: Java 21, Spring Boot 3, PostgreSQL, RabbitMQ. See
 1. A REST API accepts events and manages endpoints and subscriptions.
 2. Events and delivery attempts are stored durably in PostgreSQL.
 3. Each delivery is published to RabbitMQ and consumed by delivery workers.
-4. Failed deliveries are retried with backoff via delay queues, then dead-lettered.
+4. Failed deliveries are retried with exponential backoff scheduled in PostgreSQL, then marked `DEAD`; unprocessable messages go to a RabbitMQ dead-letter queue.
 5. Outgoing requests are HMAC-signed; metrics and health come from Actuator.
 
 ## Run locally
@@ -92,42 +92,91 @@ curl -s -X POST http://localhost:8080/api/v1/events \
   -H 'Content-Type: application/json' -H 'Idempotency-Key: order-42' \
   -d '{"eventType":"order.created","payload":{"orderId":42}}'
 
-# 3. List the resulting deliveries (PENDING, then SUCCEEDED or FAILED once dispatched)
+# 3. List the resulting deliveries (PENDING, then SUCCEEDED, FAILED while a retry is scheduled, or DEAD)
 curl -s 'http://localhost:8080/api/v1/deliveries?eventId=<EVENT_ID>'
 ```
 
 With the app and infrastructure running, `make smoke` runs the same flow end to
-end (`scripts/smoke-test.sh`, needs `curl` and `jq`). CI runs it on every PR.
+end, including a flaky endpoint that succeeds on attempt 3 and a `410` endpoint that
+ends `DEAD` (`scripts/smoke-test.sh`, needs `curl` and `jq` and a stack running with
+fast retries). CI runs it on every PR.
 
 Full stack with a local webhook sink (app container plus a receiver on port 8090):
 
 ```bash
-make up-all     # docker compose --profile app --profile sink up -d --build --wait
+make up-all     # app + sink, with fast retries (1s initial delay, 5s max, no jitter)
 make smoke      # creates an endpoint, sends an event, checks the sink received it
 make down-all   # stops everything and removes volumes
 ```
 
 ## How delivery works
 
-PostgreSQL is the source of truth and RabbitMQ distributes the work. Retries,
-backoff and the DLQ arrive in E3: in E2 a failed attempt is final (`FAILED`).
-Design notes: [ADR 0003](docs/adr/0003-delivery-dispatch.md).
+PostgreSQL is the source of truth and RabbitMQ distributes the work. Retries
+are scheduled in PostgreSQL (`next_attempt_at`) and picked up by the same poller.
+Design notes: [ADR 0003](docs/adr/0003-delivery-dispatch.md) and
+[ADR 0004](docs/adr/0004-retries-and-dead-letters.md).
 
 ```
 POST /events ──tx──▶ deliveries (PENDING)
-                          │  every poll-interval
+                          │  every poll-interval (PENDING or FAILED, due)
                           ▼
                   DeliveryPoller ── claims due rows (FOR UPDATE SKIP LOCKED),
                           │         sets locked_until, bumps version
                           ▼
-            RabbitMQ  exchange hookrelay.deliveries ─▶ queue hookrelay.deliveries.dispatch
+            RabbitMQ  exchange hookrelay.deliveries ─▶ queue hookrelay.deliveries.work
                           │   message {deliveryId, version}
                           ▼
                   DeliveryWorker ── claim(id, version) ─▶ HTTP POST ─▶ record result + attempt
 ```
 
+### Delivery states
+
+```
+            ┌──────── retryable failure, attempts left ────────┐
+            ▼                                                   │
+PENDING ──attempt──▶ SUCCEEDED (terminal)                      │
+   │                                                            │
+   └──attempt fails──▶ FAILED (next_attempt_at = now + backoff) ┘
+                         │
+                         └── no attempts left / non-retryable ──▶ DEAD (terminal)
+```
+
+`FAILED` means the last attempt failed and a retry is scheduled. `SUCCEEDED` and
+`DEAD` are terminal. `DEAD` also covers `410 Gone` (never retried) and
+deliveries whose endpoint was deleted or disabled. `lastError` says why, for
+example `HTTP 500 (gave up after 10 attempts)`.
+
+### Retry policy
+
+Delay after failed attempt N: `min(max-delay, initial-delay x multiplier^(N-1))`,
+randomised by +/- `jitter`. For `429` and `503`, a valid `Retry-After` header
+raises the wait (capped at `max-delay`). Properties live under `hookrelay.retry`.
+
+| Property | Env var | Default |
+|----------|---------|---------|
+| `max-attempts` | `HOOKRELAY_RETRY_MAX_ATTEMPTS` | `10` |
+| `initial-delay` | `HOOKRELAY_RETRY_INITIAL_DELAY` | `30s` |
+| `multiplier` | `HOOKRELAY_RETRY_MULTIPLIER` | `2.0` |
+| `max-delay` | `HOOKRELAY_RETRY_MAX_DELAY` | `6h` |
+| `jitter` | `HOOKRELAY_RETRY_JITTER` | `0.2` |
+
+The default schedule is 30s, 1m, 2m, 4m, 8m, 16m, 32m, 64m, 128m (about 4.3 h
+in total). `make up-all` and the CI smoke job use fast retries
+(`HOOKRELAY_RETRY_INITIAL_DELAY=1s`, `HOOKRELAY_RETRY_MAX_DELAY=5s`,
+`HOOKRELAY_RETRY_JITTER=0`) so the smoke test finishes quickly.
+
+### Dead-letter queue
+
+`DEAD` deliveries live only in PostgreSQL. The RabbitMQ DLQ
+`hookrelay.deliveries.dlq` (via exchange `hookrelay.deliveries.dlx`) receives
+messages the worker could not process: an exception while handling, or a message
+that cannot be converted. Nothing consumes it yet (redrive comes in E6), and the
+poller still recovers the delivery row after its lease expires. On startup the
+app deletes the old E2 queue `hookrelay.deliveries.dispatch`.
+
 Delivery is at-least-once. Any 2xx response is success. Any other status
-(redirects are not followed), an I/O error or a timeout is a failure. Every
+(redirects are not followed), an I/O error or a timeout is a failure and is
+retried, except `410 Gone`, which is terminal. Every
 attempt is recorded and visible at `GET /api/v1/deliveries/{id}/attempts`.
 
 ### What receivers get
@@ -186,8 +235,8 @@ pull request and push to `main`. Commits follow
 |-----------|-------|
 | E0 | Foundations: project skeleton, local infrastructure, CI, docs |
 | E1 | Endpoints and data model |
-| E2 (current) | Delivery pipeline |
-| E3 | Retries, backoff and DLQ |
+| E2 | Delivery pipeline |
+| E3 (current) | Retries, backoff and DLQ |
 | E4 | Signing and security |
 | E5 | Observability |
 | E6 | Admin and replay |

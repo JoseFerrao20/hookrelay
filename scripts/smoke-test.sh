@@ -19,6 +19,7 @@ done
 
 STEP="init"
 ENDPOINT_ID=""
+EXTRA_ENDPOINT_IDS=""
 HTTP_STATUS=""
 BODY_FILE="$(mktemp)"
 HEADERS_FILE="$(mktemp)"
@@ -28,6 +29,11 @@ cleanup() {
   # Best-effort removal of the endpoint if we fail before the delete step.
   if [ "$rc" -ne 0 ] && [ -n "$ENDPOINT_ID" ]; then
     curl -s -o /dev/null -X DELETE "$API/endpoints/$ENDPOINT_ID" || true
+  fi
+  if [ "$rc" -ne 0 ]; then
+    for id in $EXTRA_ENDPOINT_IDS; do
+      curl -s -o /dev/null -X DELETE "$API/endpoints/$id" || true
+    done
   fi
   rm -f "$BODY_FILE" "$HEADERS_FILE"
   exit "$rc"
@@ -130,7 +136,66 @@ jq -e --arg id "$DELIVERY_ID" --argjson payload '{"smoke":true}' \
                  and ((.body | fromjson? // null) == $payload))] | length >= 1' \
   "$BODY_FILE" >/dev/null || fail "sink has no matching request for delivery $DELIVERY_ID"
 
-step "9. delete endpoint, then GET must be 404"
+step "9. flaky endpoint (fails twice): SUCCEEDED on attempt 3 (max 60s)"
+FLAKY_KEY="smoke-$(date +%s)-$RANDOM"
+request POST "$API/endpoints" -H 'Content-Type: application/json' \
+  -d "{\"url\":\"http://webhook-sink:8080/flaky/$FLAKY_KEY?fail=2\",\"description\":\"smoke flaky\",\"eventTypes\":[\"smoke.flaky\"]}"
+expect_status 201
+FLAKY_ENDPOINT_ID="$(jq -r '.id // empty' "$BODY_FILE")"
+[ -n "$FLAKY_ENDPOINT_ID" ] || fail "flaky endpoint response has no id"
+EXTRA_ENDPOINT_IDS="$EXTRA_ENDPOINT_IDS $FLAKY_ENDPOINT_ID"
+request POST "$API/events" -H 'Content-Type: application/json' \
+  -d '{"eventType":"smoke.flaky","payload":{"smoke":"flaky"}}'
+expect_status 202
+FLAKY_DELIVERY_ID="$(jq -r --arg ep "$FLAKY_ENDPOINT_ID" '[.deliveries[] | select(.endpointId == $ep)][0].id // empty' "$BODY_FILE")"
+[ -n "$FLAKY_DELIVERY_ID" ] || fail "no delivery for the flaky endpoint"
+deadline=$((SECONDS + 60))
+while :; do
+  request GET "$API/deliveries/$FLAKY_DELIVERY_ID"
+  expect_status 200
+  DSTATUS="$(jq -r '.status // empty' "$BODY_FILE")"
+  [ "$DSTATUS" != "SUCCEEDED" ] || break
+  if [ "$SECONDS" -ge "$deadline" ]; then
+    echo "  hint: the stack must run with fast retries (make up-all, or HOOKRELAY_RETRY_INITIAL_DELAY=1s HOOKRELAY_RETRY_MAX_DELAY=5s HOOKRELAY_RETRY_JITTER=0)" >&2
+    fail "flaky delivery still '$DSTATUS' after 60s"
+  fi
+  sleep 1
+done
+request GET "$API/deliveries/$FLAKY_DELIVERY_ID/attempts"
+expect_status 200
+jq -e 'length == 3 and (map(.outcome) == ["FAILED","FAILED","SUCCEEDED"])' "$BODY_FILE" >/dev/null \
+  || fail "expected 3 attempts with outcomes FAILED, FAILED, SUCCEEDED"
+
+step "10. 410 endpoint: DEAD after 1 attempt (max 30s)"
+request POST "$API/endpoints" -H 'Content-Type: application/json' \
+  -d '{"url":"http://webhook-sink:8080/status/410","description":"smoke gone","eventTypes":["smoke.gone"]}'
+expect_status 201
+GONE_ENDPOINT_ID="$(jq -r '.id // empty' "$BODY_FILE")"
+[ -n "$GONE_ENDPOINT_ID" ] || fail "410 endpoint response has no id"
+EXTRA_ENDPOINT_IDS="$EXTRA_ENDPOINT_IDS $GONE_ENDPOINT_ID"
+request POST "$API/events" -H 'Content-Type: application/json' \
+  -d '{"eventType":"smoke.gone","payload":{"smoke":"gone"}}'
+expect_status 202
+GONE_DELIVERY_ID="$(jq -r --arg ep "$GONE_ENDPOINT_ID" '[.deliveries[] | select(.endpointId == $ep)][0].id // empty' "$BODY_FILE")"
+[ -n "$GONE_DELIVERY_ID" ] || fail "no delivery for the 410 endpoint"
+deadline=$((SECONDS + 30))
+while :; do
+  request GET "$API/deliveries/$GONE_DELIVERY_ID"
+  expect_status 200
+  DSTATUS="$(jq -r '.status // empty' "$BODY_FILE")"
+  [ "$DSTATUS" != "DEAD" ] || break
+  [ "$SECONDS" -lt "$deadline" ] || fail "410 delivery still '$DSTATUS' after 30s"
+  sleep 1
+done
+jq -e '.attemptCount == 1 and ((.lastError // "") | contains("410"))' "$BODY_FILE" >/dev/null \
+  || fail "expected DEAD with attemptCount 1 and lastError containing 410"
+
+step "11. delete all endpoints, then GET must be 404"
+for id in $FLAKY_ENDPOINT_ID $GONE_ENDPOINT_ID; do
+  request DELETE "$API/endpoints/$id"
+  expect_status 204
+done
+EXTRA_ENDPOINT_IDS=""
 request DELETE "$API/endpoints/$ENDPOINT_ID"
 expect_status 204
 DELETED_ID="$ENDPOINT_ID"

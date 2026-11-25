@@ -44,6 +44,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Start stack
+        env:
+          HOOKRELAY_RETRY_INITIAL_DELAY: 1s
+          HOOKRELAY_RETRY_MAX_DELAY: 5s
+          HOOKRELAY_RETRY_JITTER: "0"
         run: docker compose --profile app --profile sink up -d --build --wait
       - name: Smoke test
         run: scripts/smoke-test.sh
