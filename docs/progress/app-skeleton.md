@@ -92,19 +92,12 @@ Branch: e4/app-skeleton
 |------|--------------------------|-------------|-------------|
 | Progress section | done | see git log | - |
 | API-key auth + shared test setup | done | see git log | - |
-
 | V4 + SecretCipher + backfill | done | see git log | - |
-
 | WebhookSignature + signing in sender | done | see git log | - |
-
 | Rotation endpoint | done | see git log | - |
-
 | SSRF classifier + save-time validation | done | see git log | - |
-
 | HttpClient 5 + send-time resolver + DEAD | done | see git log | - |
-
 | Remaining tests | done | see git log | - |
-
 
 ### Decisions
 - Shared test properties live in `src/test/resources/config/application.yml` (merged with, and overriding, the main `application.yml`), so every `@SpringBootTest` gets the API key, encryption key and `allow-private-networks=true`.
