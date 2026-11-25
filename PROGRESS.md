@@ -57,10 +57,10 @@ they write their status to `docs/progress/<agent-name>.md`.
 | Task | Owner | Branch | Status | Last commit | Next action |
 |------|-------|--------|--------|-------------|-------------|
 | 0. Merge E3 (PR #11) | coordinator | main | done | 12936fb | - |
-| 1. E4 contract (docs/contracts/E4.md) | coordinator | main | doing | - | Write signing, rotation, encryption at rest, SSRF, API auth, tests, ownership |
-| 2a. Signing, rotation, encryption, SSRF, API keys | app-skeleton | e4/app-skeleton | todo | - | Launch after contract is on main |
-| 2b. Security env in compose, E4 smoke (auth, signature, rotation, SSRF) | local-infra | e4/local-infra | todo | - | Launch after contract is on main |
-| 2c. ADR-005, README security + verification guide, Dependabot majors | ci-docs | e4/ci-docs | todo | - | Launch after contract is on main |
+| 1. E4 contract (docs/contracts/E4.md) | coordinator | main | done | 901366b | - |
+| 2a. Signing, rotation, encryption, SSRF, API keys | app-skeleton | e4/app-skeleton | doing | - | Running (see docs/progress/app-skeleton.md) |
+| 2b. Security env in compose, E4 smoke (auth, signature, rotation, SSRF) | local-infra | e4/local-infra | doing | - | Running (see docs/progress/local-infra.md) |
+| 2c. ADR-005, README security + verification guide, Dependabot majors | ci-docs | e4/ci-docs | doing | - | Running (see docs/progress/ci-docs.md) |
 | 3. Integration (feature/e4) | coordinator | feature/e4 | todo | - | Merge 2a-2c, verify build, smoke test |
 | 4. PR "E4 — Signing & security" | coordinator | feature/e4 | todo | - | Open PR to main, watch CI |
 
