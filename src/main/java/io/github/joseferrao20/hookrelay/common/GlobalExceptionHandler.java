@@ -33,6 +33,15 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
   }
 
+  @ExceptionHandler(FieldValidationException.class)
+  ProblemDetail handleFieldValidation(FieldValidationException ex) {
+    ProblemDetail problem =
+        ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "Request validation failed.");
+    problem.setProperty(
+        "errors", List.of(Map.of("field", ex.getField(), "message", ex.getMessage())));
+    return problem;
+  }
+
   @ExceptionHandler(Exception.class)
   ProblemDetail handleUnexpected(Exception ex) {
     log.error("Unexpected error", ex);

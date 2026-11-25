@@ -52,6 +52,16 @@ public class EndpointController {
     return service.update(id, request);
   }
 
+  @PostMapping("/{id}/secret/rotate")
+  public RotateSecretResponse rotateSecret(
+      @PathVariable UUID id, @Valid @RequestBody(required = false) RotateSecretRequest request) {
+    int grace =
+        request == null
+            ? RotateSecretRequest.DEFAULT_GRACE_SECONDS
+            : request.graceSecondsOrDefault();
+    return service.rotateSecret(id, grace);
+  }
+
   @DeleteMapping("/{id}")
   public ResponseEntity<Void> delete(@PathVariable UUID id) {
     service.delete(id);
