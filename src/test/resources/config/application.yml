@@ -1,0 +1,9 @@
+# Shared test settings; merged over src/main/resources/application.yml for every test.
+hookrelay:
+  security:
+    api-keys: test-api-key-0123456789-0123456789-abcdef
+    # Base64 of 32 bytes (test only)
+    secret-encryption-key: AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=
+    ssrf:
+      # WireMock listens on localhost
+      allow-private-networks: true

@@ -38,7 +38,10 @@ import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 
-@Import(TestcontainersConfiguration.class)
+@Import({
+  TestcontainersConfiguration.class,
+  io.github.joseferrao20.hookrelay.TestAuthConfiguration.class
+})
 @SpringBootTest(
     properties = {
       "hookrelay.dispatch.enabled=true",
