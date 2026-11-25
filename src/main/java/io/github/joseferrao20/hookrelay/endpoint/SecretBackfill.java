@@ -5,17 +5,18 @@ import java.util.List;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.boot.ApplicationArguments;
-import org.springframework.boot.ApplicationRunner;
+import org.springframework.beans.factory.SmartInitializingSingleton;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
 /**
  * Encrypts endpoint secrets stored in plaintext by E1-E3. Idempotent and safe with several
- * instances: every write is conditional on the value that was read.
+ * instances: every write is conditional on the value that was read. Runs in {@link
+ * #afterSingletonsInstantiated()}, i.e. after Flyway but before lifecycle beans start, so the
+ * RabbitMQ listeners and the scheduled poller never see a plaintext secret.
  */
 @Component
-public class SecretBackfill implements ApplicationRunner {
+public class SecretBackfill implements SmartInitializingSingleton {
 
   private static final Logger log = LoggerFactory.getLogger(SecretBackfill.class);
 
@@ -30,7 +31,7 @@ public class SecretBackfill implements ApplicationRunner {
   }
 
   @Override
-  public void run(ApplicationArguments args) {
+  public void afterSingletonsInstantiated() {
     int rows = encryptPlaintextSecrets();
     if (rows > 0) {
       log.info("Encrypted {} plaintext endpoint secret value(s)", rows);
