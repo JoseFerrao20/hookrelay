@@ -4,6 +4,17 @@ updates:
     directory: "/"
     schedule:
       interval: weekly
+    # The contract pins Spring Boot 3.x and Java 21. Major upgrades of these are
+    # a deliberate decision (new ADR and contract change), not an automatic PR.
+    ignore:
+      - dependency-name: "org.springframework.boot"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "io.spring.dependency-management"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "org.springdoc:springdoc-openapi-starter-webmvc-ui"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "gradle-wrapper"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: github-actions
     directory: "/"
     schedule:
@@ -12,3 +23,7 @@ updates:
     directory: "/"
     schedule:
       interval: weekly
+    # Java 21 is pinned by the contract; a newer major is a deliberate decision.
+    ignore:
+      - dependency-name: "eclipse-temurin"
+        update-types: ["version-update:semver-major"]

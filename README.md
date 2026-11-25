@@ -13,7 +13,7 @@ Stack: Java 21, Spring Boot 3, PostgreSQL, RabbitMQ. See
 2. Events and delivery attempts are stored durably in PostgreSQL.
 3. Each delivery is published to RabbitMQ and consumed by delivery workers.
 4. Failed deliveries are retried with exponential backoff scheduled in PostgreSQL, then marked `DEAD`; unprocessable messages go to a RabbitMQ dead-letter queue.
-5. Outgoing requests are HMAC-signed; metrics and health come from Actuator.
+5. Outgoing requests are HMAC-signed and checked against SSRF; the API needs a bearer key; metrics and health come from Actuator.
 
 ## Run locally
 
@@ -21,8 +21,9 @@ Prerequisites: JDK 21, Docker.
 
 ```bash
 cp .env.example .env          # optional; defaults match the example values
+export HOOKRELAY_API_KEY=dev-only-api-key-change-me-0123456789   # dev only
 docker compose up -d          # PostgreSQL (5432) and RabbitMQ (5672, UI on 15672)
-./gradlew bootRun             # app on http://localhost:8080
+./gradlew bootRun             # app on http://localhost:8080 (needs the E4 variables, see Security configuration)
 curl http://localhost:8080/actuator/health
 ```
 
@@ -59,9 +60,26 @@ All variables are optional; the defaults work with the local compose stack.
 | `RABBITMQ_USER` / `RABBITMQ_PASSWORD` | `hookrelay` / `hookrelay` |
 | `RABBITMQ_VHOST` | `/` |
 
+## Authentication
+
+Every API call needs an API key in a bearer header:
+
+```bash
+export HOOKRELAY_API_KEY=dev-only-api-key-change-me-0123456789   # dev only
+curl -s http://localhost:8080/api/v1/endpoints \
+  -H "Authorization: Bearer $HOOKRELAY_API_KEY"
+```
+
+A missing or invalid key returns `401` with `WWW-Authenticate: Bearer` and a
+Problem Details body. These paths are public: `/actuator/health/**`,
+`/actuator/info`, `/v3/api-docs/**`, `/swagger-ui/**` and `/swagger-ui.html`. In
+Swagger UI, use "Authorize" and paste the key. Keys are set with
+`HOOKRELAY_SECURITY_API_KEYS` (see below). Design notes:
+[ADR 0005](docs/adr/0005-security.md).
+
 ## API
 
-Base path `/api/v1`, JSON, no authentication yet (E4). Interactive docs: Swagger
+Base path `/api/v1`, JSON, bearer authentication (see above). Interactive docs: Swagger
 UI at <http://localhost:8080/swagger-ui.html> (spec at `/v3/api-docs`). Design
 notes: [ADR 0002](docs/adr/0002-data-model-and-api.md).
 
@@ -78,28 +96,33 @@ notes: [ADR 0002](docs/adr/0002-data-model-and-api.md).
 | `GET /api/v1/deliveries` | List deliveries (`eventId`, `endpointId`, `status`) |
 | `GET /api/v1/deliveries/{id}` | Get a delivery |
 | `GET /api/v1/deliveries/{id}/attempts` | List the delivery's attempts |
+| `POST /api/v1/endpoints/{id}/secret/rotate` | Rotate the endpoint secret (see Rotating secrets) |
 
 Happy path:
 
 ```bash
 # 1. Register an endpoint subscribed to order.created
 curl -s -X POST http://localhost:8080/api/v1/endpoints \
+  -H "Authorization: Bearer $HOOKRELAY_API_KEY" \
   -H 'Content-Type: application/json' \
   -d '{"url":"https://example.com/webhooks","eventTypes":["order.created"]}'
 
 # 2. Submit an event (202 on first call, 200 on an idempotent replay)
 curl -s -X POST http://localhost:8080/api/v1/events \
+  -H "Authorization: Bearer $HOOKRELAY_API_KEY" \
   -H 'Content-Type: application/json' -H 'Idempotency-Key: order-42' \
   -d '{"eventType":"order.created","payload":{"orderId":42}}'
 
 # 3. List the resulting deliveries (PENDING, then SUCCEEDED, FAILED while a retry is scheduled, or DEAD)
-curl -s 'http://localhost:8080/api/v1/deliveries?eventId=<EVENT_ID>'
+curl -s 'http://localhost:8080/api/v1/deliveries?eventId=<EVENT_ID>' \
+  -H "Authorization: Bearer $HOOKRELAY_API_KEY"
 ```
 
 With the app and infrastructure running, `make smoke` runs the same flow end to
 end, including a flaky endpoint that succeeds on attempt 3 and a `410` endpoint that
-ends `DEAD` (`scripts/smoke-test.sh`, needs `curl` and `jq` and a stack running with
-fast retries). CI runs it on every PR.
+ends `DEAD` (`scripts/smoke-test.sh`, needs `curl`, `jq` and `openssl`, and a stack running with
+fast retries). It also checks the `401` without a key, the signature, the dual
+signatures after a rotation and the SSRF rejection. CI runs it on every PR.
 
 Full stack with a local webhook sink (app container plus a receiver on port 8090):
 
@@ -193,6 +216,7 @@ headers:
 | `Hookrelay-Event-Type` | Event type |
 | `Hookrelay-Attempt` | Attempt number, starting at 1 |
 | `Hookrelay-Timestamp` | Send time, Unix epoch seconds |
+| `Hookrelay-Signature` | `v1=<signature>` (two entries during a rotation grace period) |
 
 Dedupe advice: a delivery can occasionally be sent more than once (for example,
 when an attempt outlives its lease). Store `Hookrelay-Delivery-Id` and ignore
@@ -214,8 +238,119 @@ Properties live under `hookrelay.dispatch`; each can be set by environment varia
 | `consumers` | `HOOKRELAY_DISPATCH_CONSUMERS` | `4` |
 
 With `enabled=false` neither the poller nor the listener runs; the API works as before.
-Until E4, endpoint URLs are not restricted, so do not expose a development instance
-to untrusted users (SSRF risk).
+
+## Verifying webhooks
+
+Every webhook is signed so you can check that hookrelay sent it and that nobody
+changed or replayed it. Use the endpoint secret returned when you created it
+(`whsec_...`).
+
+Algorithm:
+
+1. Read the headers `Hookrelay-Delivery-Id`, `Hookrelay-Timestamp` and
+   `Hookrelay-Signature`, and the **raw request body bytes**, exactly as
+   received (do not parse and re-serialize the JSON).
+2. Build the signed content: `<deliveryId>.<timestamp>.<body>`, joined with `.`.
+3. Compute `HMAC-SHA256` of it. The key is the UTF-8 bytes of the full secret
+   string, including the `whsec_` prefix.
+4. Encode the result as standard Base64 with padding.
+5. `Hookrelay-Signature` is `v1=<sig>`. During a rotation grace period it holds
+   two entries separated by a space, `v1=<sigNew> v1=<sigPrevious>`. Accept the
+   request if **any** entry matches.
+6. Compare in constant time, and reject timestamps more than 5 minutes from your
+   clock (replay protection). Optionally dedupe on `Hookrelay-Delivery-Id`.
+
+Python 3 (standard library only):
+
+```python
+import base64
+import hashlib
+import hmac
+import time
+
+TOLERANCE_SECONDS = 300  # 5 minutes
+
+
+def verify(secrets, headers, raw_body, now=None):
+    """Return True if the webhook is authentic and fresh.
+
+    secrets   -- full secret strings, including the "whsec_" prefix
+                 (pass the old one too while you rotate)
+    headers   -- request headers, with lowercase names
+    raw_body  -- the request body as bytes, exactly as received
+    """
+    delivery_id = headers["hookrelay-delivery-id"]
+    timestamp = headers["hookrelay-timestamp"]
+    header = headers["hookrelay-signature"]
+
+    now = time.time() if now is None else now
+    if abs(now - int(timestamp)) > TOLERANCE_SECONDS:
+        return False
+
+    signed = f"{delivery_id}.{timestamp}.".encode() + raw_body
+    candidates = [part[3:] for part in header.split(" ") if part.startswith("v1=")]
+    for secret in secrets:
+        digest = hmac.new(secret.encode("utf-8"), signed, hashlib.sha256).digest()
+        expected = base64.b64encode(digest).decode("ascii")
+        for candidate in candidates:
+            if hmac.compare_digest(expected, candidate):
+                return True
+    return False
+```
+
+To check a delivery by hand (for example, from the body and headers recorded by
+a test receiver), recompute the signature with `openssl` and look for it in
+`Hookrelay-Signature`:
+
+```bash
+printf '%s.%s.%s' "$DELIVERY_ID" "$TIMESTAMP" "$BODY" \
+  | openssl dgst -sha256 -hmac "$SECRET" -binary | base64
+```
+
+## Rotating secrets
+
+```bash
+curl -s -X POST http://localhost:8080/api/v1/endpoints/<ENDPOINT_ID>/secret/rotate \
+  -H "Authorization: Bearer $HOOKRELAY_API_KEY" \
+  -H 'Content-Type: application/json' \
+  -d '{"graceSeconds": 86400}'
+```
+
+The body is optional. `graceSeconds` ranges from 0 to 604800 and defaults to
+86400 (24 h). The response is `{"secret": "whsec_...", "previousSecretExpiresAt": "<instant>"}`;
+the new secret is shown only here. During the grace period each webhook is signed
+with both secrets (`v1=<new> v1=<old>`), so you can deploy the new secret to your
+receiver without losing events, then drop the old one. With `graceSeconds` of 0
+the old secret stops signing at once and `previousSecretExpiresAt` is `null`.
+Rotating again during a grace period replaces the previous secret with the one
+that was current. An unknown or deleted endpoint returns `404`.
+
+## Security configuration
+
+There are no production defaults for the keys. The local compose stack and
+`.env.example` carry dev-only values; never use them in production.
+
+| Property | Env var | Default |
+|----------|---------|---------|
+| `hookrelay.security.api-keys` | `HOOKRELAY_SECURITY_API_KEYS` (comma-separated, each at least 32 characters) | none (required) |
+| `hookrelay.security.secret-encryption-key` | `HOOKRELAY_SECURITY_SECRET_ENCRYPTION_KEY` (Base64 of 32 bytes) | none (required) |
+| `hookrelay.security.ssrf.allow-private-networks` | `HOOKRELAY_SECURITY_SSRF_ALLOW_PRIVATE_NETWORKS` | `false` |
+| `hookrelay.security.ssrf.allowed-hosts` | `HOOKRELAY_SECURITY_SSRF_ALLOWED_HOSTS` (comma-separated) | empty |
+
+The app does not start without an API key or a valid encryption key. Generate
+real values with `openssl rand -base64 32` (use a long random string for API
+keys). Endpoint secrets are encrypted at rest with AES-256-GCM.
+
+### SSRF protection
+
+hookrelay refuses endpoint URLs that target loopback, private, link-local (which
+includes the cloud metadata address), CGNAT, multicast or unspecified addresses,
+and `localhost` names. The check runs when an endpoint is saved (a `400` on
+`url`) and again at connection time on the resolved addresses, which also stops
+DNS rebinding. A blocked delivery goes `DEAD` and is not retried. For local
+development, list exact hostnames in `HOOKRELAY_SECURITY_SSRF_ALLOWED_HOSTS`
+(compose sets `webhook-sink`), or set `HOOKRELAY_SECURITY_SSRF_ALLOW_PRIVATE_NETWORKS=true`
+on a machine nobody else can reach. Never do either in production.
 
 ## Development
 
@@ -236,8 +371,8 @@ pull request and push to `main`. Commits follow
 | E0 | Foundations: project skeleton, local infrastructure, CI, docs |
 | E1 | Endpoints and data model |
 | E2 | Delivery pipeline |
-| E3 (current) | Retries, backoff and DLQ |
-| E4 | Signing and security |
+| E3 | Retries, backoff and DLQ |
+| E4 (current) | Signing and security |
 | E5 | Observability |
 | E6 | Admin and replay |
 | E7 | Hardening and release |

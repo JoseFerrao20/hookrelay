@@ -62,3 +62,20 @@ Branch: e3/ci-docs
 
 ### Problems
 - none
+
+## E4
+
+Branch: e4/ci-docs
+
+| Task | Status (todo/doing/done) | Last commit | Next action |
+|------|--------------------------|-------------|-------------|
+| Dependabot major-version ignores | done | see git log | - |
+| ADR 0005 | done | see git log | - |
+| README security docs, roadmap | done | see git log | - |
+
+### Decisions
+- Python verifier was tested against an openssl-computed signature (valid, tampered body, expired timestamp).
+- Health curl in the README stays without a key, since it is a public path.
+
+### Problems
+- none
