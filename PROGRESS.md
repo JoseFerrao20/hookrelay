@@ -58,10 +58,10 @@ they write their status to `docs/progress/<agent-name>.md`.
 |------|-------|--------|--------|-------------|-------------|
 | 0. Merge E3 (PR #11) | coordinator | main | done | 12936fb | - |
 | 1. E4 contract (docs/contracts/E4.md) | coordinator | main | done | 901366b | - |
-| 2a. Signing, rotation, encryption, SSRF, API keys | app-skeleton | e4/app-skeleton | doing | - | Running (see docs/progress/app-skeleton.md) |
+| 2a. Signing, rotation, encryption, SSRF, API keys | app-skeleton | e4/app-skeleton | done | bdf0568 | - |
 | 2b. Security env in compose, E4 smoke (auth, signature, rotation, SSRF) | local-infra | e4/local-infra | done | 0e8f414 | Run smoke against real app in integration (mock only so far) |
 | 2c. ADR-005, README security + verification guide, Dependabot majors | ci-docs | e4/ci-docs | done | f6b6bfc | Verify README signature guide in integration |
-| 3. Integration (feature/e4) | coordinator | feature/e4 | todo | - | Merge 2a-2c, verify build, smoke test |
+| 3. Integration (feature/e4) | coordinator | feature/e4 | doing | - | Merge 2a-2c, security review, build, smoke test |
 | 4. PR "E4 — Signing & security" | coordinator | feature/e4 | todo | - | Open PR to main, watch CI |
 
 Open Dependabot PRs (owner decision, not touched): #15 Spring Boot 4, #12 springdoc 3, #13 Gradle 9, #3 Temurin 25 conflict with the contract (Boot 3.x / Java 21); #14 spotless and #2/#4/#5/#7 GitHub Actions look safe.
