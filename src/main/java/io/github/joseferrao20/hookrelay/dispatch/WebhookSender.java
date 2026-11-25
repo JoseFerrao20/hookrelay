@@ -1,14 +1,17 @@
 package io.github.joseferrao20.hookrelay.dispatch;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import io.github.joseferrao20.hookrelay.security.BlockedDestinationException;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
@@ -30,9 +33,21 @@ public class WebhookSender {
     this.userAgent = "hookrelay/" + (version != null ? version : "0.0.1-SNAPSHOT");
   }
 
+  /**
+   * Sends one webhook. {@code signingSecrets} are the plaintext secrets that sign this delivery,
+   * the current one first; the signature covers the exact body bytes that go on the wire.
+   */
   public SendResult send(
-      UUID deliveryId, UUID eventId, String eventType, int attempt, String url, JsonNode payload) {
+      UUID deliveryId,
+      UUID eventId,
+      String eventType,
+      int attempt,
+      String url,
+      JsonNode payload,
+      List<String> signingSecrets) {
     long start = System.nanoTime();
+    byte[] body = payload.toString().getBytes(StandardCharsets.UTF_8);
+    long timestamp = clock.instant().getEpochSecond();
     try {
       HttpOutcome outcome =
           client
@@ -44,12 +59,15 @@ public class WebhookSender {
               .header("Hookrelay-Event-Id", eventId.toString())
               .header("Hookrelay-Event-Type", eventType)
               .header("Hookrelay-Attempt", Integer.toString(attempt))
-              .header("Hookrelay-Timestamp", Long.toString(clock.instant().getEpochSecond()))
-              .body(payload.toString())
+              .header("Hookrelay-Timestamp", Long.toString(timestamp))
+              .header(
+                  "Hookrelay-Signature",
+                  WebhookSignature.header(signingSecrets, deliveryId.toString(), timestamp, body))
+              .body(body)
               .exchange(
                   (request, response) -> {
-                    try (var body = response.getBody()) {
-                      body.transferTo(OutputStream.nullOutputStream());
+                    try (var in = response.getBody()) {
+                      in.transferTo(OutputStream.nullOutputStream());
                     } catch (IOException ignored) {
                       // the body is discarded anyway; the status line is what matters
                     }
@@ -66,12 +84,25 @@ public class WebhookSender {
       boolean ok = status >= 200 && status < 300;
       return new SendResult(status, ok ? null : "HTTP " + status, ms, outcome.retryAfter());
     } catch (Exception e) {
+      BlockedDestinationException blocked = findBlocked(e);
+      if (blocked != null) {
+        return SendResult.blocked(blocked.getMessage(), elapsedMs(start));
+      }
       String message = describe(e);
       if (message.length() > MAX_ERROR_LENGTH) {
         message = message.substring(0, MAX_ERROR_LENGTH);
       }
       return new SendResult(null, message, elapsedMs(start));
     }
+  }
+
+  private static BlockedDestinationException findBlocked(Throwable e) {
+    for (Throwable t = e; t != null; t = t.getCause() == t ? null : t.getCause()) {
+      if (t instanceof BlockedDestinationException b) {
+        return b;
+      }
+    }
+    return null;
   }
 
   private record HttpOutcome(int status, Duration retryAfter) {}

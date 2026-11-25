@@ -1,7 +1,14 @@
 package io.github.joseferrao20.hookrelay.dispatch;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.net.http.HttpClient;
+import io.github.joseferrao20.hookrelay.security.SsrfDnsResolver;
+import io.github.joseferrao20.hookrelay.security.SsrfGuard;
+import org.apache.hc.client5.http.config.ConnectionConfig;
+import org.apache.hc.client5.http.config.RequestConfig;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.HttpClients;
+import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManagerBuilder;
+import org.apache.hc.core5.util.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.core.AmqpAdmin;
@@ -16,7 +23,7 @@ import org.springframework.beans.factory.SmartInitializingSingleton;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.client.JdkClientHttpRequestFactory;
+import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.web.client.RestClient;
 
@@ -78,16 +85,35 @@ public class DispatchConfig {
     return new Jackson2JsonMessageConverter(objectMapper);
   }
 
+  /**
+   * HTTP client for webhooks: Apache HttpClient 5 with a resolver that refuses blocked addresses,
+   * so connections only ever use checked addresses. No redirects, no automatic retries.
+   */
   @Bean
-  RestClient webhookRestClient(DispatchProperties props) {
-    HttpClient httpClient =
-        HttpClient.newBuilder()
-            .connectTimeout(props.connectTimeout())
-            .followRedirects(HttpClient.Redirect.NEVER)
-            .version(HttpClient.Version.HTTP_1_1)
+  RestClient webhookRestClient(DispatchProperties props, SsrfGuard ssrfGuard) {
+    var connectionManager =
+        PoolingHttpClientConnectionManagerBuilder.create()
+            .setDnsResolver(new SsrfDnsResolver(ssrfGuard))
+            .setDefaultConnectionConfig(
+                ConnectionConfig.custom()
+                    .setConnectTimeout(Timeout.of(props.connectTimeout()))
+                    .setSocketTimeout(Timeout.of(props.requestTimeout()))
+                    .build())
             .build();
-    JdkClientHttpRequestFactory factory = new JdkClientHttpRequestFactory(httpClient);
-    factory.setReadTimeout(props.requestTimeout());
-    return RestClient.builder().requestFactory(factory).build();
+    CloseableHttpClient httpClient =
+        HttpClients.custom()
+            .setConnectionManager(connectionManager)
+            .setDefaultRequestConfig(
+                RequestConfig.custom()
+                    .setResponseTimeout(Timeout.of(props.requestTimeout()))
+                    .setRedirectsEnabled(false)
+                    .build())
+            .disableRedirectHandling()
+            .disableAutomaticRetries()
+            .disableCookieManagement()
+            .build();
+    return RestClient.builder()
+        .requestFactory(new HttpComponentsClientHttpRequestFactory(httpClient))
+        .build();
   }
 }

@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
 import com.github.tomakehurst.wiremock.stubbing.Scenario;
 import io.github.joseferrao20.hookrelay.TestcontainersConfiguration;
+import io.github.joseferrao20.hookrelay.common.SecretCipher;
 import io.github.joseferrao20.hookrelay.delivery.Delivery;
 import io.github.joseferrao20.hookrelay.delivery.DeliveryAttempt;
 import io.github.joseferrao20.hookrelay.delivery.DeliveryAttemptRepository;
@@ -27,6 +28,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -77,6 +79,13 @@ class RetryIntegrationTest {
   @Autowired DeliveryAttemptRepository attempts;
   @Autowired EventRepository events;
   @Autowired EndpointRepository endpoints;
+  @Autowired SecretCipher cipher;
+
+  private Endpoint endpointWithSecret(String url, String secret, boolean enabled, Instant now) {
+    UUID id = UUID.randomUUID();
+    return new Endpoint(id, url, null, cipher.encrypt(id, secret), enabled, Set.of("*"), now);
+  }
+
   @Autowired SmartInitializingSingleton legacyQueueCleanup;
 
   @BeforeEach
@@ -91,7 +100,7 @@ class RetryIntegrationTest {
   private Delivery newDelivery(String path) throws Exception {
     Instant now = Instant.now();
     Endpoint endpoint =
-        endpoints.save(new Endpoint(wm.baseUrl() + path, null, "secret", true, Set.of("*"), now));
+        endpoints.save(endpointWithSecret(wm.baseUrl() + path, "secret", true, now));
     Event event = events.save(new Event("order.created", json.readTree("{\"a\":1}"), null, now));
     return deliveries.save(new Delivery(event.getId(), endpoint.getId(), now.minusSeconds(1)));
   }

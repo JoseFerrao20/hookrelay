@@ -8,8 +8,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
+import io.github.joseferrao20.hookrelay.security.SsrfGuard;
+import java.net.InetAddress;
 import java.time.Clock;
 import java.time.Duration;
+import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -34,7 +38,9 @@ class WebhookSenderTest {
             Duration.ofSeconds(1),
             Duration.ofSeconds(1),
             1);
-    return new WebhookSender(new DispatchConfig().webhookRestClient(props), Clock.systemUTC());
+    SsrfGuard guard = new SsrfGuard(true, Set.of(), InetAddress::getAllByName);
+    return new WebhookSender(
+        new DispatchConfig().webhookRestClient(props, guard), Clock.systemUTC());
   }
 
   private SendResult send(String path) throws Exception {
@@ -45,7 +51,8 @@ class WebhookSenderTest {
             "a.b",
             1,
             wm.baseUrl() + path,
-            mapper.readTree("{\"x\":1}"));
+            mapper.readTree("{\"x\":1}"),
+            List.of("whsec_test"));
   }
 
   @Test
@@ -84,7 +91,8 @@ class WebhookSenderTest {
                 "a.b",
                 1,
                 "http://127.0.0.1:1/x",
-                mapper.readTree("{}"));
+                mapper.readTree("{}"),
+                List.of("whsec_test"));
     assertThat(r.responseStatus()).isNull();
     assertThat(r.error()).isNotBlank();
   }
@@ -99,8 +107,12 @@ class WebhookSenderTest {
                 "a.b",
                 1,
                 "http://does-not-exist.invalid/x",
-                mapper.readTree("{}"));
+                mapper.readTree("{}"),
+                List.of("whsec_test"));
     assertThat(r.responseStatus()).isNull();
-    assertThat(r.error()).doesNotContain("null").contains("UnresolvedAddressException");
+    assertThat(r.error())
+        .doesNotContain("null")
+        .contains("UnknownHostException")
+        .contains("does-not-exist.invalid");
   }
 }

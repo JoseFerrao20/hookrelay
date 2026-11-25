@@ -1,6 +1,7 @@
 package io.github.joseferrao20.hookrelay.dispatch;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import io.github.joseferrao20.hookrelay.common.SecretCipher;
 import io.github.joseferrao20.hookrelay.delivery.Delivery;
 import io.github.joseferrao20.hookrelay.delivery.DeliveryAttempt;
 import io.github.joseferrao20.hookrelay.delivery.DeliveryAttemptRepository;
@@ -12,6 +13,7 @@ import io.github.joseferrao20.hookrelay.event.Event;
 import io.github.joseferrao20.hookrelay.event.EventRepository;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import org.slf4j.Logger;
@@ -35,6 +37,7 @@ public class DeliveryWorker {
   private final RetryPolicy retryPolicy;
   private final Clock clock;
   private final TransactionTemplate tx;
+  private final SecretCipher cipher;
 
   public DeliveryWorker(
       DeliveryRepository deliveries,
@@ -45,7 +48,8 @@ public class DeliveryWorker {
       DispatchProperties props,
       RetryPolicy retryPolicy,
       Clock clock,
-      TransactionTemplate tx) {
+      TransactionTemplate tx,
+      SecretCipher cipher) {
     this.deliveries = deliveries;
     this.attempts = attempts;
     this.events = events;
@@ -55,6 +59,7 @@ public class DeliveryWorker {
     this.retryPolicy = retryPolicy;
     this.clock = clock;
     this.tx = tx;
+    this.cipher = cipher;
   }
 
   /** Everything needed to send, loaded in the claim transaction. */
@@ -65,6 +70,7 @@ public class DeliveryWorker {
       String eventType,
       JsonNode payload,
       String url,
+      List<String> signingSecrets,
       String blockedReason) {}
 
   @RabbitListener(
@@ -93,7 +99,8 @@ public class DeliveryWorker {
               claim.eventType(),
               claim.attemptNumber(),
               claim.url(),
-              claim.payload());
+              claim.payload(),
+              claim.signingSecrets());
     }
     record(message.deliveryId(), claim, startedAt, result);
   }
@@ -116,6 +123,7 @@ public class DeliveryWorker {
     } else if (!endpoint.isEnabled()) {
       blocked = "Endpoint disabled";
     }
+    List<String> secrets = blocked == null ? signingSecrets(endpoint, now) : List.of();
     return new Claim(
         attemptNumber,
         version,
@@ -123,14 +131,29 @@ public class DeliveryWorker {
         event.getEventType(),
         event.getPayload(),
         endpoint.getUrl(),
+        secrets,
         blocked);
+  }
+
+  /** Current secret first, then the previous one while its grace period lasts (plaintext). */
+  private List<String> signingSecrets(Endpoint endpoint, Instant now) {
+    List<String> secrets = new ArrayList<>(2);
+    secrets.add(cipher.decrypt(endpoint.getId(), endpoint.getSecret()));
+    if (endpoint.getPreviousSecret() != null
+        && endpoint.getPreviousSecretExpiresAt() != null
+        && endpoint.getPreviousSecretExpiresAt().isAfter(now)) {
+      secrets.add(cipher.decrypt(endpoint.getId(), endpoint.getPreviousSecret()));
+    }
+    return secrets;
   }
 
   private void record(UUID deliveryId, Claim claim, Instant startedAt, SendResult result) {
     DeliveryStatus outcome = result.succeeded() ? DeliveryStatus.SUCCEEDED : DeliveryStatus.FAILED;
+    String blockedReason =
+        claim.blockedReason() != null ? claim.blockedReason() : result.blockedReason();
     RetryDecision decision =
-        claim.blockedReason() != null
-            ? RetryPolicy.dead(claim.blockedReason())
+        blockedReason != null
+            ? RetryPolicy.dead(blockedReason)
             : retryPolicy.decide(claim.attemptNumber(), result, clock.instant());
     tx.executeWithoutResult(
         s -> {

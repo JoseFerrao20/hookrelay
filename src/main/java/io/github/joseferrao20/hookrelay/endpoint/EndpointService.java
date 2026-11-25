@@ -3,8 +3,11 @@ package io.github.joseferrao20.hookrelay.endpoint;
 import io.github.joseferrao20.hookrelay.common.NotFoundException;
 import io.github.joseferrao20.hookrelay.common.PageResponse;
 import io.github.joseferrao20.hookrelay.common.Pagination;
+import io.github.joseferrao20.hookrelay.common.SecretCipher;
+import io.github.joseferrao20.hookrelay.security.SsrfGuard;
 import java.security.SecureRandom;
 import java.time.Clock;
+import java.time.Instant;
 import java.util.Base64;
 import java.util.HashSet;
 import java.util.UUID;
@@ -18,23 +21,52 @@ public class EndpointService {
 
   private final EndpointRepository repository;
   private final Clock clock;
+  private final SecretCipher cipher;
+  private final SsrfGuard ssrfGuard;
 
-  public EndpointService(EndpointRepository repository, Clock clock) {
+  public EndpointService(
+      EndpointRepository repository, Clock clock, SecretCipher cipher, SsrfGuard ssrfGuard) {
     this.repository = repository;
     this.clock = clock;
+    this.cipher = cipher;
+    this.ssrfGuard = ssrfGuard;
   }
 
   @Transactional
   public EndpointCreatedResponse create(CreateEndpointRequest request) {
+    ssrfGuard.validateForSave(request.url());
+    UUID id = UUID.randomUUID();
+    String secret = generateSecret();
     Endpoint endpoint =
         new Endpoint(
+            id,
             request.url(),
             request.description(),
-            generateSecret(),
+            cipher.encrypt(id, secret),
             request.enabled() == null || request.enabled(),
             new HashSet<>(request.eventTypes()),
             clock.instant());
-    return EndpointCreatedResponse.from(repository.save(endpoint));
+    return EndpointCreatedResponse.from(repository.save(endpoint), secret);
+  }
+
+  /**
+   * Replaces the secret. The old one keeps signing next to the new one until {@code graceSeconds}
+   * have passed; with zero it stops signing immediately.
+   */
+  @Transactional
+  public RotateSecretResponse rotateSecret(UUID id, int graceSeconds) {
+    Endpoint endpoint = find(id);
+    Instant now = clock.instant();
+    String newSecret = generateSecret();
+    String previous = null;
+    Instant previousExpiresAt = null;
+    if (graceSeconds > 0) {
+      previous = endpoint.getSecret(); // already ciphertext bound to this endpoint id
+      previousExpiresAt = now.plusSeconds(graceSeconds);
+    }
+    endpoint.rotateSecret(cipher.encrypt(id, newSecret), previous, previousExpiresAt);
+    endpoint.touch(now);
+    return new RotateSecretResponse(newSecret, previousExpiresAt);
   }
 
   @Transactional(readOnly = true)
@@ -53,6 +85,7 @@ public class EndpointService {
   public EndpointResponse update(UUID id, UpdateEndpointRequest request) {
     Endpoint endpoint = find(id);
     if (request.url() != null) {
+      ssrfGuard.validateForSave(request.url());
       endpoint.setUrl(request.url());
     }
     if (request.description() != null) {

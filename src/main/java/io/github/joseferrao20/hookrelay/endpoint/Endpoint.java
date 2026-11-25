@@ -25,8 +25,16 @@ public class Endpoint {
   @Column(length = 500)
   private String description;
 
-  @Column(nullable = false, length = 100)
+  /** Ciphertext ({@code v1:...}), see SecretCipher. */
+  @Column(nullable = false, length = 255)
   private String secret;
+
+  /** Ciphertext of the secret replaced by the last rotation, while its grace period lasts. */
+  @Column(name = "previous_secret", length = 255)
+  private String previousSecret;
+
+  @Column(name = "previous_secret_expires_at")
+  private Instant previousSecretExpiresAt;
 
   @Column(nullable = false)
   private boolean enabled;
@@ -54,7 +62,19 @@ public class Endpoint {
       boolean enabled,
       Set<String> eventTypes,
       Instant now) {
-    this.id = UUID.randomUUID();
+    this(UUID.randomUUID(), url, description, secret, enabled, eventTypes, now);
+  }
+
+  /** {@code secret} is the stored (encrypted) form; the id is needed first as encryption AAD. */
+  public Endpoint(
+      UUID id,
+      String url,
+      String description,
+      String secret,
+      boolean enabled,
+      Set<String> eventTypes,
+      Instant now) {
+    this.id = id;
     this.url = url;
     this.description = description;
     this.secret = secret;
@@ -86,6 +106,21 @@ public class Endpoint {
 
   public String getSecret() {
     return secret;
+  }
+
+  public String getPreviousSecret() {
+    return previousSecret;
+  }
+
+  public Instant getPreviousSecretExpiresAt() {
+    return previousSecretExpiresAt;
+  }
+
+  /** Replaces the secret; {@code previous} may be null with a null expiry (no grace period). */
+  public void rotateSecret(String newSecret, String previous, Instant previousExpiresAt) {
+    this.secret = newSecret;
+    this.previousSecret = previous;
+    this.previousSecretExpiresAt = previousExpiresAt;
   }
 
   public boolean isEnabled() {
