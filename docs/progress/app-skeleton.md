@@ -91,16 +91,31 @@ Branch: e4/app-skeleton
 | Task | Status (todo/doing/done) | Last commit | Next action |
 |------|--------------------------|-------------|-------------|
 | Progress section | done | see git log | - |
-| API-key auth + shared test setup | doing | - | SecurityConfig, filter, test config |
-| V4 + SecretCipher + backfill | todo | - | - |
-| WebhookSignature + signing in sender | todo | - | - |
-| Rotation endpoint | todo | - | - |
-| SSRF classifier + save-time validation | todo | - | - |
-| HttpClient 5 + send-time resolver + DEAD | todo | - | - |
-| Remaining tests | todo | - | - |
+| API-key auth + shared test setup | done | see git log | - |
+
+| V4 + SecretCipher + backfill | done | see git log | - |
+
+| WebhookSignature + signing in sender | done | see git log | - |
+
+| Rotation endpoint | done | see git log | - |
+
+| SSRF classifier + save-time validation | done | see git log | - |
+
+| HttpClient 5 + send-time resolver + DEAD | done | see git log | - |
+
+| Remaining tests | done | see git log | - |
+
 
 ### Decisions
 - Shared test properties live in `src/test/resources/config/application.yml` (merged with, and overriding, the main `application.yml`), so every `@SpringBootTest` gets the API key, encryption key and `allow-private-networks=true`.
 
+- Secrets are decrypted by the worker in the claim transaction and passed to the sender as `List<String>` (current first, previous only while `previous_secret_expires_at > now`); `Endpoint` entities hold ciphertext only and have a constructor taking the id first (the id is the AAD).
+- `SecretCipher` lives in `common`; it rejects plaintext (non-`v1:`) values strictly. A worker hitting a not-yet-backfilled row fails that message and the poller redelivers after the lease, which is acceptable because the backfill runs at startup.
+- Save-time check failures use a new `FieldValidationException` mapped to the usual `errors[{field,message}]` Problem Details with 400.
+- `BlockedDestinationException extends UnknownHostException` is thrown by the resolver; the sender finds it in the cause chain and returns `SendResult.blocked(...)`, so the worker marks the delivery DEAD without retries.
+- The API-key filter is not a bean (only runs inside the security chain); `UserDetailsServiceAutoConfiguration` is excluded to avoid the generated password.
+- Test MockMvc requests get the key through a `MockMvcBuilderCustomizer` (`TestAuthConfiguration`); WebMvc slice tests import `SecurityConfig` plus it.
+- IPv6 forms blocked beyond the contract list: NAT64 `64:ff9b::/96`, 6to4 `2002::/16` and site-local `fec0::/10` when they embed or are internal.
+
 ### Problems
-- None yet.
+- None. `./gradlew build` green.

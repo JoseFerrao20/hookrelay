@@ -31,7 +31,6 @@ class ProblemAuthenticationEntryPoint implements AuthenticationEntryPoint {
     response.setStatus(HttpStatus.UNAUTHORIZED.value());
     response.setHeader(HttpHeaders.WWW_AUTHENTICATE, "Bearer");
     response.setContentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
-    response.setCharacterEncoding("UTF-8");
     mapper.writeValue(response.getOutputStream(), problem);
   }
 }
