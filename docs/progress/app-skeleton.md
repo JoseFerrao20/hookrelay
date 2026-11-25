@@ -83,3 +83,24 @@ Branch: e3/app-skeleton
 
 ### Problems
 - None. `./gradlew build` green.
+
+## E4
+
+Branch: e4/app-skeleton
+
+| Task | Status (todo/doing/done) | Last commit | Next action |
+|------|--------------------------|-------------|-------------|
+| Progress section | done | see git log | - |
+| API-key auth + shared test setup | doing | - | SecurityConfig, filter, test config |
+| V4 + SecretCipher + backfill | todo | - | - |
+| WebhookSignature + signing in sender | todo | - | - |
+| Rotation endpoint | todo | - | - |
+| SSRF classifier + save-time validation | todo | - | - |
+| HttpClient 5 + send-time resolver + DEAD | todo | - | - |
+| Remaining tests | todo | - | - |
+
+### Decisions
+- Shared test properties live in `src/test/resources/config/application.yml` (merged with, and overriding, the main `application.yml`), so every `@SpringBootTest` gets the API key, encryption key and `allow-private-networks=true`.
+
+### Problems
+- None yet.
